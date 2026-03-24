@@ -1,0 +1,1247 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+{% set total_messages = messages|length %}
+{% set latest_message = messages[-1] if messages else None %}
+{% set latest_user_message = None %}
+{% for message in messages|reverse %}
+    {% if not message.is_system_message and message.is_sent_by(current_user) %}
+        {% set latest_user_message = message %}
+    {% endif %}
+{% endfor %}
+{% set chat_proxy_count = namespace(value=0) %}
+{% if latest_user_message %}
+    {% for message in messages %}
+        {% if not message.is_system_message and not message.is_sent_by(current_user) and message.created_at > latest_user_message.created_at %}
+            {% set chat_proxy_count.value = chat_proxy_count.value + 1 %}
+        {% endif %}
+    {% endfor %}
+{% elif messages %}
+    {% for message in messages %}
+        {% if not message.is_system_message and not message.is_sent_by(current_user) %}
+            {% set chat_proxy_count.value = chat_proxy_count.value + 1 %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<section class="page-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <span class="section-kicker">Workspace</span>
+            <h1 class="page-title mb-2">Collaboration Workspace</h1>
+            <p class="page-subtitle mb-0">Everything is now grouped into cleaner tabs so it is easier to manage this collaboration.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.my_collaborations') }}" class="btn btn-outline-dark rounded-pill px-3">Back to Collaborations</a>
+            <a href="{{ url_for('main.help_request_detail', request_id=collaboration.help_request.id) }}" class="btn btn-primary rounded-pill px-3">View Request</a>
+        </div>
+    </div>
+</section>
+
+<div class="collaboration-workspace-shell mb-4">
+    <div class="collaboration-tab-toolbar">
+        <div class="nav nav-pills collaboration-tabs" id="collaborationTabs" role="tablist">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-panel" type="button" role="tab" aria-controls="overview-panel" aria-selected="true">
+                <i class="bi bi-grid-1x2-fill me-2"></i>Overview
+            </button>
+            <button class="nav-link" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat-panel" type="button" role="tab" aria-controls="chat-panel" aria-selected="false">
+                <i class="bi bi-chat-dots-fill me-2"></i>Chat
+                {% if chat_proxy_count.value > 0 %}<span class="badge rounded-pill text-bg-danger ms-2">{{ chat_proxy_count.value }}</span>{% elif total_messages > 0 %}<span class="badge rounded-pill text-bg-light text-dark ms-2">{{ total_messages }}</span>{% endif %}
+            </button>
+            <button class="nav-link" id="schedule-tab" data-bs-toggle="tab" data-bs-target="#schedule-panel" type="button" role="tab" aria-controls="schedule-panel" aria-selected="false">
+                <i class="bi bi-calendar3 me-2"></i>Schedule
+                {% if pending_reschedule %}<span class="badge rounded-pill text-bg-warning ms-2">1</span>{% endif %}
+            </button>
+            <button class="nav-link" id="outcome-tab" data-bs-toggle="tab" data-bs-target="#outcome-panel" type="button" role="tab" aria-controls="outcome-panel" aria-selected="false">
+                <i class="bi bi-clipboard2-check-fill me-2"></i>Outcome &amp; Progress
+            </button>
+        </div>
+    </div>
+
+    <div class="tab-content collaboration-tab-content" id="collaborationTabsContent">
+        <div class="tab-pane fade show active" id="overview-panel" role="tabpanel" aria-labelledby="overview-tab" tabindex="0">
+            <div class="row g-4 mb-4">
+                <div class="col-xl-8">
+                    <div class="card border-0 shadow-sm mb-4 collaboration-summary-card app-card">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+            <div>
+                <span class="badge bg-secondary mb-2">{{ collaboration.help_request.display_category() }}</span>
+                <h3 class="mb-2">{{ collaboration.help_request.title }}</h3>
+                <p class="text-muted mb-0">
+                    Status:
+                    <span class="badge {{ collaboration.outcome_status_badge_class() }}">{{ collaboration.outcome_status_label() }}</span>
+                </p>
+            </div>
+            <a href="{{ url_for('main.help_request_detail', request_id=collaboration.help_request.id) }}" class="btn btn-outline-primary btn-sm">
+                View Request
+            </a>
+        </div>
+
+        <hr>
+
+        <div class="row g-4">
+            <div class="col-md-6">
+                <h6 class="mb-2">Participants</h6>
+                <p class="mb-1"><strong>Requester:</strong> {{ collaboration.requester_user.full_name }}</p>
+                <p class="mb-0"><strong>Provider:</strong> {{ collaboration.provider_user.full_name }}</p>
+            </div>
+            <div class="col-md-6">
+                <h6 class="mb-2">Current Schedule</h6>
+                <p class="mb-1">{{ collaboration.help_request.schedule_display() }}</p>
+                {% if collaboration.help_request.schedule_type == 'recurring_monthly' and collaboration.help_request.monthly_dates_list() %}
+                    <div class="monthly-days-inline mt-2">
+                        {% if collaboration.help_request.has_collapsed_monthly_dates() %}
+                            <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#currentScheduleMonthlyDays" aria-expanded="false" aria-controls="currentScheduleMonthlyDays">
+                                View selected days
+                            </button>
+                            <div class="collapse mt-2" id="currentScheduleMonthlyDays">
+                                <div class="monthly-day-chip-list">
+                                    {% for day in collaboration.help_request.monthly_dates_ordinal_list() %}
+                                        <span class="monthly-day-chip">{{ day }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="monthly-day-chip-list">
+                                {% for day in collaboration.help_request.monthly_dates_ordinal_list() %}
+                                    <span class="monthly-day-chip">{{ day }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+                <p class="mb-0 text-muted">Schedule changes can be proposed from the section below.</p>
+            </div>
+            <div class="col-12">
+                <h6 class="mb-2">Request Description</h6>
+                <p class="mb-0">{{ collaboration.help_request.description }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+                </div>
+                <div class="col-xl-4">
+                    <div class="card border-0 shadow-sm app-card h-100 collaboration-overview-sidecard">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                                <div>
+                                    <h5 class="mb-1">Quick workspace view</h5>
+                                    <p class="text-muted small mb-0">Jump straight to the section you need.</p>
+                                </div>
+                                <span class="badge {{ collaboration.outcome_status_badge_class() }}">{{ collaboration.outcome_status_label() }}</span>
+                            </div>
+
+                            <div class="workspace-stat-list">
+                                <div class="workspace-stat-item">
+                                    <span class="workspace-stat-label">Messages</span>
+                                    <strong>{{ total_messages }}</strong>
+                                </div>
+                                <div class="workspace-stat-item">
+                                    <span class="workspace-stat-label">Schedule proposals</span>
+                                    <strong>{{ recent_reschedule_proposals|length }}</strong>
+                                </div>
+                                <div class="workspace-stat-item">
+                                    <span class="workspace-stat-label">Pending schedule action</span>
+                                    <strong>{{ 'Yes' if pending_reschedule else 'No' }}</strong>
+                                </div>
+                                <div class="workspace-stat-item">
+                                    <span class="workspace-stat-label">Rating status</span>
+                                    <strong>{{ collaboration.rating_status_label_for(current_user) }}</strong>
+                                </div>
+                            </div>
+
+                            <div class="overview-shortcut-grid mt-4">
+                                <button class="btn btn-outline-primary overview-jump-btn" type="button" data-tab-target="#chat-panel" data-tab-button="#chat-tab">
+                                    <i class="bi bi-chat-dots me-2"></i>Open Chat
+                                </button>
+                                <button class="btn btn-outline-primary overview-jump-btn" type="button" data-tab-target="#schedule-panel" data-tab-button="#schedule-tab">
+                                    <i class="bi bi-calendar3 me-2"></i>Open Schedule
+                                </button>
+                                <button class="btn btn-outline-primary overview-jump-btn" type="button" data-tab-target="#outcome-panel" data-tab-button="#outcome-tab">
+                                    <i class="bi bi-clipboard2-check me-2"></i>Open Outcome
+                                </button>
+                            </div>
+
+                            {% if collaboration.is_closed() %}
+                                <div class="alert alert-light border mt-4 mb-0">
+                                    <strong>Workspace closed.</strong> Schedule changes and new messages are locked because the collaboration is {{ collaboration.outcome_status_label()|lower }}.
+                                </div>
+                            {% elif pending_reschedule %}
+                                <div class="alert alert-warning mt-4 mb-0">
+                                    <strong>Action needed in Schedule.</strong> There is a pending reschedule proposal for review.
+                                </div>
+                            {% elif chat_proxy_count.value > 0 %}
+                                <div class="alert alert-primary mt-4 mb-0">
+                                    <strong>Reply waiting in Chat.</strong> The other participant sent {{ chat_proxy_count.value }} new message{{ '' if chat_proxy_count.value == 1 else 's' }} after your last reply.
+                                </div>
+                            {% else %}
+                                <div class="alert alert-light border mt-4 mb-0">
+                                    <strong>Everything looks stable.</strong> Use the tabs above whenever you need to chat, change timing, or close the collaboration.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm app-card h-100">
+                        <div class="card-body p-4">
+                            <div class="small text-muted mb-2">Latest chat activity</div>
+                            {% if latest_message %}
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                    <strong>{{ latest_message.display_sender_name() }}</strong>
+                                    <span class="small text-muted">{{ latest_message.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+                                </div>
+                                <p class="mb-0 text-muted">{{ latest_message.body[:180] }}{{ '...' if latest_message.body|length > 180 else '' }}</p>
+                            {% else %}
+                                <p class="mb-0 text-muted">No conversation yet. Start in the Chat tab.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm app-card h-100">
+                        <div class="card-body p-4">
+                            <div class="small text-muted mb-2">Schedule status</div>
+                            <h6 class="mb-2">{{ collaboration.help_request.schedule_display() }}</h6>
+                            {% if pending_reschedule %}
+                                <p class="mb-0 text-muted">There is a pending schedule proposal from <strong>{{ pending_reschedule.proposer.full_name }}</strong>.</p>
+                            {% else %}
+                                <p class="mb-0 text-muted">No change request is pending at the moment.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm app-card h-100">
+                        <div class="card-body p-4">
+                            <div class="small text-muted mb-2">Outcome status</div>
+                            <h6 class="mb-2">{{ collaboration.outcome_status_label() }}</h6>
+                            {% if collaboration.status == 'Completed' %}
+                                <p class="mb-0 text-muted">The work is closed. Ratings are available in Outcome &amp; Progress.</p>
+                            {% elif collaboration.status == 'Cancelled' %}
+                                <p class="mb-0 text-muted">This collaboration is closed and no further chat or schedule changes are allowed.</p>
+                            {% else %}
+                                <p class="mb-0 text-muted">Use Outcome &amp; Progress when work is done or if the collaboration must be cancelled.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="chat-panel" role="tabpanel" aria-labelledby="chat-tab" tabindex="0">
+            {% set other_participant = collaboration.provider_user if current_user.id == collaboration.requester_id else collaboration.requester_user %}
+            <div class="card shadow-sm collaboration-chat-card collaboration-chat-pro-card">
+                <div class="chat-panel-header">
+                    <div class="chat-panel-identity">
+                        <div class="chat-panel-avatar">
+                            {% if other_participant.profile_image %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' ~ other_participant.profile_image) }}" alt="{{ other_participant.full_name }}">
+                            {% else %}
+                                <span>{{ other_participant.full_name[:1] }}</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="chat-panel-name-row">
+                                <h5 class="mb-0">{{ other_participant.full_name }}</h5>
+                                <span class="chat-panel-status-pill">{{ collaboration.outcome_status_label() }}</span>
+                            </div>
+                            <p class="chat-panel-context mb-0">{{ collaboration.help_request.title }}</p>
+                            <div class="chat-panel-submeta">
+                                <span><i class="bi bi-shield-check me-1"></i>Private collaboration chat</span>
+                                {% if pending_reschedule %}
+                                    <span><i class="bi bi-calendar-event me-1"></i>Schedule change pending</span>
+                                {% elif chat_proxy_count.value > 0 %}
+                                    <span><i class="bi bi-reply-fill me-1"></i>Awaiting your response</span>
+                                {% else %}
+                                    <span><i class="bi bi-check2-circle me-1"></i>Active conversation</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-panel-summary">
+                        <span class="badge bg-light text-dark chat-message-count">{{ messages|length }} message{{ '' if messages|length == 1 else 's' }}</span>
+                    </div>
+                </div>
+
+                <div class="card-body chat-panel-body p-0">
+                    <div class="chat-thread-shell">
+                        <div class="chat-thread" id="chat-thread">
+                            {% set chat_state = namespace(prev_sender_id=None, prev_is_system=False, prev_day=None, new_anchor_inserted=False) %}
+                            {% for message in messages %}
+                                {% set message_day_key = message.created_at.strftime('%Y-%m-%d') %}
+                                {% if chat_state.prev_day != message_day_key %}
+                                    <div class="chat-day-divider">
+                                        <span>
+                                            {{ message.created_at.strftime('%d %b %Y') }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                {% if not chat_state.new_anchor_inserted and chat_proxy_count.value > 0 and loop.index0 == (messages|length - chat_proxy_count.value) %}
+                                    <div class="chat-unread-divider"><span>New messages</span></div>
+                                    {% set chat_state.new_anchor_inserted = True %}
+                                {% endif %}
+
+                                {% if message.is_system_message %}
+                                    <div class="system-message-row">
+                                        <div class="system-message-bubble">
+                                            <span class="system-message-text">{{ message.body }}</span>
+                                            <span class="system-message-time" title="{{ message.created_at.strftime('%d %b %Y, %H:%M') }}">{{ message.created_at.strftime('%H:%M') }}</span>
+                                        </div>
+                                    </div>
+                                    {% set chat_state.prev_sender_id = None %}
+                                    {% set chat_state.prev_is_system = True %}
+                                {% else %}
+                                    {% set is_sent = message.is_sent_by(current_user) %}
+                                    {% set is_grouped = chat_state.prev_sender_id == message.sender_id and not chat_state.prev_is_system %}
+                                    <div class="message-row {% if is_sent %}message-row-sent{% else %}message-row-received{% endif %} {% if is_grouped %}message-row-grouped{% endif %}">
+                                        <div class="message-stack {% if is_sent %}message-stack-sent{% else %}message-stack-received{% endif %}">
+                                            {% if not is_sent and not is_grouped %}
+                                                <div class="message-sender" title="{{ message.display_sender_name() }}">{{ message.display_sender_name().split(' ')[0] }}</div>
+                                            {% endif %}
+                                            <div class="message-bubble {% if is_sent %}message-bubble-sent{% else %}message-bubble-received{% endif %}">
+                                                <div class="message-body-text">{{ message.body }}</div>
+                                                <div class="message-meta-row">
+                                                    <div class="message-time" title="{{ message.created_at.strftime('%d %b %Y, %H:%M') }}">{{ message.created_at.strftime('%H:%M') }}</div>
+                                                    {% if message.can_be_flagged_by(current_user) %}
+                                                        {% set existing_flag = message.existing_flag_by_user(current_user) %}
+                                                        {% if existing_flag %}
+                                                            <span class="flagged-pill">Flagged</span>
+                                                        {% else %}
+                                                            <button type="button" class="flag-message-btn" data-bs-toggle="modal" data-bs-target="#flagMessageModal" data-message-id="{{ message.id }}" data-message-sender="{{ message.display_sender_name() }}">Flag</button>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% set chat_state.prev_sender_id = message.sender_id %}
+                                    {% set chat_state.prev_is_system = False %}
+                                {% endif %}
+                                {% set chat_state.prev_day = message_day_key %}
+                            {% else %}
+                                <div class="chat-empty-state chat-empty-state-pro">
+                                    <div class="chat-empty-state-icon"><i class="bi bi-chat-dots"></i></div>
+                                    <h6 class="mb-2">No messages yet</h6>
+                                    <p class="text-muted mb-0">Start the conversation below to discuss this collaboration.</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if collaboration.is_closed() %}
+                        <div class="messaging-restriction-panel mt-0 mx-4 mb-4">
+                            <div class="fw-semibold mb-1">Conversation closed</div>
+                            <p class="text-muted mb-0">This collaboration is {{ collaboration.outcome_status_label()|lower }}, so new chat messages are disabled.</p>
+                        </div>
+                    {% elif active_messaging_restriction %}
+                        <div class="messaging-restriction-panel mt-0 mx-4 mb-4">
+                            <div class="fw-semibold mb-1">Temporary messaging restriction active</div>
+                            <p class="text-muted mb-2">You cannot send collaboration chat messages until this restriction ends.</p>
+                            <div class="small"><strong>Period:</strong> {{ active_messaging_restriction.period_label() }}</div>
+                            <div class="small"><strong>Status:</strong> {{ active_messaging_restriction.remaining_label() }}</div>
+                        </div>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('main.send_collaboration_message', collaboration_id=collaboration.id) }}" class="chat-composer" id="message-composer">
+                        <input type="hidden" name="return_tab" value="chat">
+                        <div class="chat-composer-inner">
+                            <div class="chat-composer-input-wrap">
+                                <textarea class="form-control chat-textarea" id="body" name="body" rows="1" maxlength="3000" placeholder="Write a message..." required></textarea>
+                            </div>
+                            <button type="submit" class="chat-send-btn" aria-label="Send message" title="Send message">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </div>
+                        <div class="chat-composer-footer">
+                            <small class="text-muted">Enter to send · Shift + Enter for a new line · Keep the chat focused on this collaboration.</small>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+
+        </div>
+
+        <div class="tab-pane fade" id="schedule-panel" role="tabpanel" aria-labelledby="schedule-tab" tabindex="0">
+            <div class="card shadow-sm mb-4 collaboration-reschedule-card" id="reschedule-section">
+    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Schedule Changes</h5>
+                <p class="text-muted mb-0">Keep schedule changes lightweight. Send a proposal and let the other participant review it.</p>
+            </div>
+            {% if pending_reschedule %}
+                <span class="badge bg-warning text-dark">Pending proposal</span>
+            {% else %}
+                <span class="badge bg-light text-dark">No pending proposal</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <strong>Current agreed schedule:</strong> {{ collaboration.help_request.schedule_display() }}
+            </div>
+            {% if collaboration.status == 'Active' %}
+                {% if pending_reschedule %}
+                    <button type="button" class="btn btn-outline-secondary" disabled>Proposal Pending</button>
+                {% else %}
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#rescheduleProposalModal">
+                        Propose Schedule Change
+                    </button>
+                {% endif %}
+            {% else %}
+                <button type="button" class="btn btn-outline-secondary" disabled>Schedule Locked</button>
+            {% endif %}
+        </div>
+
+        {% if collaboration.status != 'Active' %}
+            <div class="alert alert-light border mb-4">
+                Schedule changes are only available while the collaboration is <strong>Active</strong>.
+            </div>
+        {% endif %}
+
+        {% if pending_reschedule %}
+            <div class="pending-reschedule-card mb-4">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <h6 class="mb-2">Pending proposal from {{ pending_reschedule.proposer.full_name }}</h6>
+                        <p class="mb-1"><strong>Current:</strong> {{ pending_reschedule.current_schedule_display() }}</p>
+                        {% if pending_reschedule.current_schedule_type == 'recurring_monthly' and pending_reschedule.current_monthly_dates_list() %}
+                            <div class="mb-2">
+                                {% if pending_reschedule.current_has_collapsed_monthly_dates() %}
+                                    <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#pendingCurrentMonthlyDays" aria-expanded="false" aria-controls="pendingCurrentMonthlyDays">
+                                        View selected days
+                                    </button>
+                                    <div class="collapse mt-2" id="pendingCurrentMonthlyDays">
+                                        <div class="monthly-day-chip-list">
+                                            {% for day in pending_reschedule.current_monthly_dates_ordinal_list() %}
+                                                <span class="monthly-day-chip">{{ day }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="monthly-day-chip-list mt-2">
+                                        {% for day in pending_reschedule.current_monthly_dates_ordinal_list() %}
+                                            <span class="monthly-day-chip">{{ day }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        <p class="mb-1"><strong>Proposed:</strong> {{ pending_reschedule.proposed_schedule_display() }}</p>
+                        {% if pending_reschedule.proposed_schedule_type == 'recurring_monthly' and pending_reschedule.proposed_monthly_dates_list() %}
+                            <div class="mb-2">
+                                {% if pending_reschedule.proposed_has_collapsed_monthly_dates() %}
+                                    <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#pendingProposedMonthlyDays" aria-expanded="false" aria-controls="pendingProposedMonthlyDays">
+                                        View selected days
+                                    </button>
+                                    <div class="collapse mt-2" id="pendingProposedMonthlyDays">
+                                        <div class="monthly-day-chip-list">
+                                            {% for day in pending_reschedule.proposed_monthly_dates_ordinal_list() %}
+                                                <span class="monthly-day-chip">{{ day }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="monthly-day-chip-list mt-2">
+                                        {% for day in pending_reschedule.proposed_monthly_dates_ordinal_list() %}
+                                            <span class="monthly-day-chip">{{ day }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        <p class="mb-1 pending-effect-text"><strong>Effect:</strong> {{ pending_reschedule.impact_summary() }}</p>
+                        {% if pending_reschedule.note %}
+                            <p class="mb-0"><strong>Note:</strong> {{ pending_reschedule.note }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">
+                        {{ pending_reschedule.created_at.strftime('%d %b %Y, %H:%M') }}
+                    </div>
+                </div>
+
+                {% if pending_reschedule.can_be_decided_by(current_user) %}
+                    <div class="d-flex gap-2 mt-3 flex-wrap">
+                        <form method="POST" action="{{ url_for('main.accept_reschedule_proposal', proposal_id=pending_reschedule.id) }}">
+                            <button type="submit" class="btn btn-success">Accept Proposal</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('main.decline_reschedule_proposal', proposal_id=pending_reschedule.id) }}">
+                            <button type="submit" class="btn btn-outline-danger">Decline Proposal</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="mt-3 small text-muted">Waiting for the other participant to review this schedule proposal.</div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="schedule-change-empty-state mb-4">
+                <h6 class="mb-1">No schedule proposal in progress</h6>
+                <p class="text-muted mb-0">Use <strong>Propose Schedule Change</strong> if you and the other participant need to adjust the agreed timing.</p>
+            </div>
+        {% endif %}
+
+        {% if recent_reschedule_proposals %}
+            <div class="mt-4">
+                <h6 class="mb-3">Recent schedule change history</h6>
+                <div class="reschedule-history-list">
+                    {% for proposal in recent_reschedule_proposals %}
+                        <div class="reschedule-history-item">
+                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                <div>
+                                    <div class="fw-semibold mb-1">
+                                        {{ proposal.proposer.full_name }} —
+                                        <span class="badge {% if proposal.status == 'Accepted' %}bg-success{% elif proposal.status == 'Declined' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                            {{ proposal.status }}
+                                        </span>
+                                    </div>
+                                    <div class="small mb-1"><strong>Current:</strong> {{ proposal.current_schedule_display() }}</div>
+                                    {% if proposal.current_schedule_type == 'recurring_monthly' and proposal.current_monthly_dates_list() %}
+                                        <div class="small mb-2">
+                                            {% if proposal.current_has_collapsed_monthly_dates() %}
+                                                <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#historyCurrentMonthlyDays{{ proposal.id }}" aria-expanded="false" aria-controls="historyCurrentMonthlyDays{{ proposal.id }}">
+                                                    View selected days
+                                                </button>
+                                                <div class="collapse mt-2" id="historyCurrentMonthlyDays{{ proposal.id }}">
+                                                    <div class="monthly-day-chip-list">
+                                                        {% for day in proposal.current_monthly_dates_ordinal_list() %}
+                                                            <span class="monthly-day-chip">{{ day }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="monthly-day-chip-list mt-2">
+                                                    {% for day in proposal.current_monthly_dates_ordinal_list() %}
+                                                        <span class="monthly-day-chip">{{ day }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="small"><strong>Proposed:</strong> {{ proposal.proposed_schedule_display() }}</div>
+                                    {% if proposal.proposed_schedule_type == 'recurring_monthly' and proposal.proposed_monthly_dates_list() %}
+                                        <div class="small mb-2">
+                                            {% if proposal.proposed_has_collapsed_monthly_dates() %}
+                                                <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#historyProposedMonthlyDays{{ proposal.id }}" aria-expanded="false" aria-controls="historyProposedMonthlyDays{{ proposal.id }}">
+                                                    View selected days
+                                                </button>
+                                                <div class="collapse mt-2" id="historyProposedMonthlyDays{{ proposal.id }}">
+                                                    <div class="monthly-day-chip-list">
+                                                        {% for day in proposal.proposed_monthly_dates_ordinal_list() %}
+                                                            <span class="monthly-day-chip">{{ day }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="monthly-day-chip-list mt-2">
+                                                    {% for day in proposal.proposed_monthly_dates_ordinal_list() %}
+                                                        <span class="monthly-day-chip">{{ day }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    <div class="small mt-1 proposal-impact-text"><strong>Effect:</strong> {{ proposal.impact_summary() }}</div>
+                                    {% if proposal.note %}
+                                        <div class="small mt-1"><strong>Note:</strong> {{ proposal.note }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="small text-muted text-nowrap">
+                                    {{ proposal.created_at.strftime('%d %b %Y, %H:%M') }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+
+        </div>
+
+        <div class="tab-pane fade" id="outcome-panel" role="tabpanel" aria-labelledby="outcome-tab" tabindex="0">
+            <div class="card border-0 shadow-sm mb-4 app-card" id="outcome-section">
+    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Outcome & Progress</h5>
+                <p class="text-muted mb-0">Manage completion or cancellation of this collaboration.</p>
+            </div>
+            <span class="badge {{ collaboration.outcome_status_badge_class() }}">{{ collaboration.outcome_status_label() }}</span>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        {% if collaboration.status == "Active" %}
+            <div class="alert alert-light border mb-4">
+                <strong>Collaboration is active.</strong>
+                Work is still in progress. Use the actions below when the job is completed or if cancellation is needed.
+            </div>
+
+            <div class="row g-4">
+                {% if collaboration.can_request_completion(current_user) %}
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 h-100">
+                        <h6 class="mb-2">Mark work as completed</h6>
+                        <p class="text-muted small mb-3">
+                            Use this when you have finished the job and want the requester to confirm completion.
+                        </p>
+                        <form method="POST" action="{{ url_for('main.request_collaboration_completion', collaboration_id=collaboration.id) }}">
+                            <div class="mb-3">
+                                <label for="completion_note" class="form-label">Completion note <span class="text-muted">(optional)</span></label>
+                                <textarea class="form-control" id="completion_note" name="completion_note" rows="3" maxlength="1000" placeholder="Example: All agreed tasks are done."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">Mark Work as Completed</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if collaboration.can_request_cancellation(current_user) %}
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 h-100">
+                        <h6 class="mb-2">Request cancellation</h6>
+                        <p class="text-muted small mb-3">
+                            Use this only if the collaboration cannot continue.
+                        </p>
+                        <form method="POST" action="{{ url_for('main.request_collaboration_cancellation', collaboration_id=collaboration.id) }}">
+                            <div class="mb-3">
+                                <label for="cancellation_reason" class="form-label">Reason</label>
+                                <textarea class="form-control" id="cancellation_reason" name="cancellation_reason" rows="3" maxlength="1000" placeholder="Explain why this collaboration should be cancelled." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-outline-danger">Request Cancellation</button>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        {% elif collaboration.status == "PendingCompletionConfirmation" %}
+            <div class="alert alert-warning mb-4">
+                <strong>Awaiting requester confirmation.</strong>
+                The provider marked the work as completed.
+            </div>
+
+            <div class="border rounded-3 p-3 mb-3">
+                <div class="small text-muted mb-1">Requested by</div>
+                <div class="fw-semibold mb-2">
+                    {{ collaboration.completion_requested_by.full_name if collaboration.completion_requested_by else "Provider" }}
+                </div>
+                {% if collaboration.completion_requested_at %}
+                    <div class="small mb-2"><strong>Requested at:</strong> {{ collaboration.completion_requested_at_display() }}</div>
+                {% endif %}
+                {% if collaboration.completion_note %}
+                    <div class="small"><strong>Completion note:</strong> {{ collaboration.completion_note }}</div>
+                {% endif %}
+            </div>
+
+            {% if collaboration.can_confirm_completion(current_user) %}
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <form method="POST" action="{{ url_for('main.confirm_collaboration_completion', collaboration_id=collaboration.id) }}">
+                        <button type="submit" class="btn btn-success">Confirm Completion</button>
+                    </form>
+                </div>
+
+                <div class="border rounded-3 p-3">
+                    <h6 class="mb-2">Not completed yet</h6>
+                    <p class="text-muted small mb-3">Send the collaboration back to active if the work still needs attention.</p>
+                    <form method="POST" action="{{ url_for('main.reject_collaboration_completion', collaboration_id=collaboration.id) }}">
+                        <div class="mb-3">
+                            <label for="completion_rejection_reason" class="form-label">Reason</label>
+                            <textarea class="form-control" id="completion_rejection_reason" name="reason" rows="3" maxlength="1000" placeholder="Explain what is still missing." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger">Not Yet Completed</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="small text-muted">Waiting for the requester to confirm or reject completion.</div>
+            {% endif %}
+
+        {% elif collaboration.status == "PendingCancellation" %}
+            <div class="alert alert-warning mb-4">
+                <strong>Cancellation request pending.</strong>
+                One participant requested cancellation and the other must decide.
+            </div>
+
+            <div class="border rounded-3 p-3 mb-3">
+                <div class="small text-muted mb-1">Requested by</div>
+                <div class="fw-semibold mb-2">
+                    {{ collaboration.cancellation_requested_by.full_name if collaboration.cancellation_requested_by else "Participant" }}
+                </div>
+                {% if collaboration.cancellation_requested_at %}
+                    <div class="small mb-2"><strong>Requested at:</strong> {{ collaboration.cancellation_requested_at_display() }}</div>
+                {% endif %}
+                {% if collaboration.cancellation_reason %}
+                    <div class="small"><strong>Reason:</strong> {{ collaboration.cancellation_reason }}</div>
+                {% endif %}
+            </div>
+
+            {% if collaboration.can_decide_cancellation(current_user) %}
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <form method="POST" action="{{ url_for('main.accept_collaboration_cancellation', collaboration_id=collaboration.id) }}">
+                        <button type="submit" class="btn btn-danger">Accept Cancellation</button>
+                    </form>
+                </div>
+
+                <div class="border rounded-3 p-3">
+                    <h6 class="mb-2">Reject cancellation</h6>
+                    <p class="text-muted small mb-3">Keep the collaboration active by rejecting the cancellation request.</p>
+                    <form method="POST" action="{{ url_for('main.reject_collaboration_cancellation', collaboration_id=collaboration.id) }}">
+                        <div class="mb-3">
+                            <label for="cancellation_rejection_reason" class="form-label">Reason</label>
+                            <textarea class="form-control" id="cancellation_rejection_reason" name="reason" rows="3" maxlength="1000" placeholder="Explain why the collaboration should continue." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline-secondary">Reject Cancellation</button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="small text-muted">Waiting for the other participant to accept or reject the cancellation request.</div>
+            {% endif %}
+
+        {% elif collaboration.status == "Completed" %}
+            <div class="alert alert-primary mb-0">
+                <strong>Collaboration completed.</strong>
+                {% if collaboration.completed_at %}
+                    This collaboration was closed on {{ collaboration.completed_at_display() }}.
+                {% else %}
+                    This collaboration is closed.
+                {% endif %}
+            </div>
+
+        {% elif collaboration.status == "Cancelled" %}
+            <div class="alert alert-danger mb-0">
+                <strong>Collaboration cancelled.</strong>
+                {% if collaboration.cancelled_at %}
+                    This collaboration was closed on {{ collaboration.cancelled_at_display() }}.
+                {% else %}
+                    This collaboration is closed.
+                {% endif %}
+            </div>
+            {% if collaboration.cancellation_reason %}
+                <div class="small mt-3"><strong>Cancellation reason:</strong> {{ collaboration.cancellation_reason }}</div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+
+
+            <div class="card border-0 shadow-sm mb-4 app-card" id="rating-section">
+    <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Ratings</h5>
+                <p class="text-muted mb-0">Ratings unlock only after a collaboration is completed.</p>
+            </div>
+            {% if collaboration.status == "Completed" %}
+                {% if collaboration.rating_pending_for(current_user) %}
+                    <span class="badge bg-warning text-dark">Rating pending</span>
+                {% else %}
+                    <span class="badge bg-success">Rated</span>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-light text-dark">Locked</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-4">
+        {% if collaboration.status != "Completed" %}
+            <div class="alert alert-light border mb-0">
+                Ratings become available only after the collaboration is <strong>Completed</strong>.
+            </div>
+        {% else %}
+            {% set my_rating = collaboration.rating_given_by(current_user) %}
+            {% set other_rating = collaboration.rating_given_by(collaboration.other_party_for(current_user)) if collaboration.other_party_for(current_user) else None %}
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 h-100">
+                        <h6 class="mb-2">Your rating</h6>
+                        {% if my_rating %}
+                            <div class="alert alert-success py-2">Submitted on {{ my_rating.created_at_display() }}</div>
+                            <ul class="list-group list-group-flush">
+                                {% for label, value in my_rating.dimension_rows() %}
+                                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                                        <span>{{ label }}</span>
+                                        <strong>{{ my_rating.rating_stars(value) }}</strong>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            {% if collaboration.user_role_for(current_user) == "requester" %}
+                                <p class="text-muted small mb-3">Rate the provider based on the completed work.</p>
+                                <form method="POST" action="{{ url_for('main.submit_collaboration_rating', collaboration_id=collaboration.id) }}">
+                                    <div class="mb-3">
+                                        <label class="form-label">Overall experience</label>
+                                        <select class="form-select" name="overall_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5 - Excellent</option>
+                                            <option value="4">4 - Good</option>
+                                            <option value="3">3 - Average</option>
+                                            <option value="2">2 - Poor</option>
+                                            <option value="1">1 - Very poor</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Communication</label>
+                                        <select class="form-select" name="communication_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Timeliness</label>
+                                        <select class="form-select" name="timeliness_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Quality of work</label>
+                                        <select class="form-select" name="quality_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Submit Provider Rating</button>
+                                </form>
+                            {% elif collaboration.user_role_for(current_user) == "provider" %}
+                                <p class="text-muted small mb-3">Rate the requester based on how they managed the collaboration.</p>
+                                <form method="POST" action="{{ url_for('main.submit_collaboration_rating', collaboration_id=collaboration.id) }}">
+                                    <div class="mb-3">
+                                        <label class="form-label">Overall experience</label>
+                                        <select class="form-select" name="overall_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5 - Excellent</option>
+                                            <option value="4">4 - Good</option>
+                                            <option value="3">3 - Average</option>
+                                            <option value="2">2 - Poor</option>
+                                            <option value="1">1 - Very poor</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Communication</label>
+                                        <select class="form-select" name="communication_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Clarity of request</label>
+                                        <select class="form-select" name="clarity_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Cooperation</label>
+                                        <select class="form-select" name="cooperation_rating" required>
+                                            <option value="">Choose</option>
+                                            <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Submit Requester Rating</button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="border rounded-3 p-3 h-100">
+                        <h6 class="mb-2">Other participant status</h6>
+                        {% set other_party = collaboration.other_party_for(current_user) %}
+                        {% if other_party %}
+                            <p class="mb-2"><strong>{{ other_party.full_name }}</strong></p>
+                        {% endif %}
+
+                        {% if other_rating %}
+                            <div class="alert alert-light border py-2">Rating submitted on {{ other_rating.created_at_display() }}</div>
+                            <p class="text-muted small mb-0">The other participant has completed their rating form.</p>
+                        {% else %}
+                            <div class="alert alert-warning py-2">Rating not submitted yet.</div>
+                            <p class="text-muted small mb-0">This will update once the other participant submits their rating.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="rescheduleProposalModal" tabindex="-1" aria-labelledby="rescheduleProposalModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div>
+                    <h5 class="modal-title mb-1" id="rescheduleProposalModalLabel">Propose a Schedule Change</h5>
+                    <p class="text-muted mb-0">Submit a new proposed schedule for this collaboration. The other participant will be notified and can accept or decline it.</p>
+                <div class="schedule-scope-card mt-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                        <div>
+                            <h6 class="mb-1">Quick change options</h6>
+                            <p class="text-muted mb-0 small">Use these when you only want to adjust dates or only want to adjust working times.</p>
+                        </div>
+                        <span class="badge bg-light text-dark">Optional</span>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check scope-check">
+                                <input class="form-check-input" type="checkbox" id="rs_change_dates_only">
+                                <label class="form-check-label" for="rs_change_dates_only">Change dates only</label>
+                                <div class="form-text">Keep the current working time unchanged.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check scope-check">
+                                <input class="form-check-input" type="checkbox" id="rs_change_times_only">
+                                <label class="form-check-label" for="rs_change_times_only">Change time only</label>
+                                <div class="form-text">Keep the current dates and recurrence arrangement unchanged.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 pb-4">
+                <form method="POST" action="{{ url_for('main.propose_reschedule', collaboration_id=collaboration.id) }}" id="reschedule-form">
+                    <div class="mb-3" id="rs-schedule-type-wrap">
+                        <label for="rs_schedule_type" class="form-label">Schedule Type</label>
+                        <select class="form-select" id="rs_schedule_type" name="schedule_type" required>
+                            <option value="one_time" {% if collaboration.help_request.schedule_type == 'one_time' %}selected{% endif %}>One Time</option>
+                            <option value="date_range" {% if collaboration.help_request.schedule_type == 'date_range' %}selected{% endif %}>Date Range</option>
+                            <option value="recurring_weekly" {% if collaboration.help_request.schedule_type == 'recurring_weekly' %}selected{% endif %}>Recurring Weekly</option>
+                            <option value="recurring_monthly" {% if collaboration.help_request.schedule_type == 'recurring_monthly' %}selected{% endif %}>Recurring Monthly</option>
+                        </select>
+                    </div>
+
+                    <div id="rs-one-time-fields">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="rs_date_needed" class="form-label">Date Needed</label>
+                                <input class="form-control" type="date" id="rs_date_needed" name="date_needed" value="{{ collaboration.help_request.date_needed.isoformat() if collaboration.help_request.date_needed else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rs-date-range-fields">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="rs_start_date" class="form-label">Start Date</label>
+                                <input class="form-control" type="date" id="rs_start_date" name="start_date" value="{{ collaboration.help_request.start_date.isoformat() if collaboration.help_request.start_date else '' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="rs_end_date" class="form-label">End Date</label>
+                                <input class="form-control" type="date" id="rs_end_date" name="end_date" value="{{ collaboration.help_request.end_date.isoformat() if collaboration.help_request.end_date else '' }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rs-weekly-fields" class="mb-3">
+                        <label class="form-label">Select Working Days</label>
+                        <div class="row">
+                            {% set weekday_values = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}
+                            {% set selected_weekdays = collaboration.help_request.recurrence_days_list() %}
+                            {% for day in weekday_values %}
+                            <div class="col-md-3 col-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="recurrence_days" value="{{ day }}" id="rs_day_{{ day }}" {% if day in selected_weekdays %}checked{% endif %}>
+                                    <label class="form-check-label" for="rs_day_{{ day }}">{{ day }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Select the days on which this work should recur each week.</div>
+                    </div>
+
+                    <div id="rs-monthly-fields" class="mb-3">
+                        <label class="form-label">Select Days of the Month</label>
+                        <div class="row">
+                            {% set selected_month_days = collaboration.help_request.monthly_dates_list() %}
+                            {% for day in range(1, 32) %}
+                            <div class="col-md-2 col-3 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="monthly_dates" value="{{ day }}" id="rs_month_day_{{ day }}" {% if day|string in selected_month_days %}checked{% endif %}>
+                                    <label class="form-check-label" for="rs_month_day_{{ day }}">{{ day }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Select the dates on which this work should recur each month.</div>
+                    </div>
+
+                    <div id="rs-time-fields-wrap">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="rs_start_time" class="form-label">Start Time</label>
+                            <input class="form-control" type="time" id="rs_start_time" name="start_time" value="{{ collaboration.help_request.start_time.strftime('%H:%M') if collaboration.help_request.start_time else '' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="rs_end_time" class="form-label">End Time</label>
+                            <input class="form-control" type="time" id="rs_end_time" name="end_time" value="{{ collaboration.help_request.end_time.strftime('%H:%M') if collaboration.help_request.end_time else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="rs_time_flexible" name="time_flexible" {% if collaboration.help_request.time_flexible %}checked{% endif %}>
+                        <label class="form-check-label" for="rs_time_flexible">Time is flexible</label>
+                    </div>
+                    </div>
+
+                    <div class="schedule-preview-card mb-4" id="reschedule-preview-card">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h6 class="mb-0">Schedule Preview</h6>
+                            <span class="badge bg-light text-dark">Live summary</span>
+                        </div>
+                        <div class="preview-line mb-2">
+                            <span class="preview-label">Current</span>
+                            <div>
+                                <div class="preview-value" id="current-schedule-preview">{{ collaboration.help_request.schedule_display() }}</div>
+                                <div class="preview-extra mt-2 {% if collaboration.help_request.schedule_type != 'recurring_monthly' or not collaboration.help_request.monthly_dates_list() %}d-none{% endif %}" id="current-monthly-preview-wrap">
+                                    <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#currentPreviewMonthlyDays" aria-expanded="false" aria-controls="currentPreviewMonthlyDays">
+                                        View selected days
+                                    </button>
+                                    <div class="collapse mt-2" id="currentPreviewMonthlyDays">
+                                        <div class="monthly-day-chip-list" id="current-preview-monthly-days">
+                                            {% for day in collaboration.help_request.monthly_dates_ordinal_list() %}
+                                                <span class="monthly-day-chip">{{ day }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-line mb-2">
+                            <span class="preview-label">Proposed</span>
+                            <div>
+                                <div class="preview-value" id="proposed-schedule-preview">{{ collaboration.help_request.schedule_display() }}</div>
+                                <div class="preview-extra mt-2 {% if collaboration.help_request.schedule_type != 'recurring_monthly' or not collaboration.help_request.monthly_dates_list() %}d-none{% endif %}" id="proposed-monthly-preview-wrap">
+                                    <button class="btn btn-link btn-sm p-0 monthly-days-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#proposedPreviewMonthlyDays" aria-expanded="false" aria-controls="proposedPreviewMonthlyDays">
+                                        View selected days
+                                    </button>
+                                    <div class="collapse mt-2" id="proposedPreviewMonthlyDays">
+                                        <div class="monthly-day-chip-list" id="proposed-preview-monthly-days">
+                                            {% for day in collaboration.help_request.monthly_dates_ordinal_list() %}
+                                                <span class="monthly-day-chip">{{ day }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="preview-line mb-0">
+                            <span class="preview-label">Effect</span>
+                            <div class="preview-value preview-effect" id="schedule-impact-preview">This change keeps the current arrangement unless you update the details above.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="rs_note" class="form-label">Message <span class="text-muted">(optional)</span></label>
+                        <textarea class="form-control reschedule-textarea" id="rs_note" name="note" rows="3" maxlength="1000" placeholder="Add any context that may help the other participant review this change."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send Proposal</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="flagMessageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title mb-1">Flag message</h5>
+                    <p class="text-muted mb-0 small">Report a message that may violate community guidelines.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <form method="POST" action="" id="flag-message-form">
+                    <div class="mb-3">
+                        <label for="flag_reason_category" class="form-label fw-semibold">Reason</label>
+                        <select class="form-select" id="flag_reason_category" name="reason_category" required>
+                            <option value="">Select a reason</option>
+                            <option value="offensive">Abusive or offensive</option>
+                            <option value="harassment">Harassment or bullying</option>
+                            <option value="spam">Spam or repeated unwanted messages</option>
+                            <option value="fraud">Scam or fraud concern</option>
+                            <option value="inappropriate">Inappropriate content</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="flag_details" class="form-label fw-semibold">Additional details <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea class="form-control" id="flag_details" name="details" rows="4" maxlength="1000" placeholder="Add any context that may help the admin review."></textarea>
+                    </div>
+                    <div class="flag-target-preview small text-muted mb-3" id="flag-target-preview"></div>
+                    <div class="d-flex justify-content-end gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Submit Flag</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<a href="#chat-panel" class="workspace-chat-fab" id="workspaceChatFab" data-tab-target="#chat-panel" data-tab-button="#chat-tab" aria-label="Open collaboration chat">
+    <span class="workspace-chat-fab-icon"><i class="bi bi-chat-dots-fill"></i></span>
+    <span class="workspace-chat-fab-text">Chat</span>
+    {% if chat_proxy_count.value > 0 %}
+        <span class="workspace-chat-fab-badge">{{ chat_proxy_count.value }}</span>
+    {% elif total_messages > 0 %}
+        <span class="workspace-chat-fab-badge workspace-chat-fab-badge-muted">{{ total_messages }}</span>
+    {% endif %}
+</a>
+
+<script>
+    (function () {
+        const thread = document.getElementById('chat-thread');
+        const composer = document.getElementById('message-composer');
+        const composerTextarea = document.getElementById('body');
+        const storageKey = 'skillsinn-collaboration-active-tab';
+
+        function scrollChatToBottom(forceSmooth = false) {
+            if (thread) {
+                thread.scrollTo({ top: thread.scrollHeight, behavior: forceSmooth ? 'smooth' : 'auto' });
+            }
+        }
+
+        function activateTab(buttonSelector, panelSelector, options = {}) {
+            const button = document.querySelector(buttonSelector);
+            const panel = document.querySelector(panelSelector);
+            if (!button || !panel || typeof bootstrap === 'undefined' || !bootstrap.Tab) {
+                return;
+            }
+            new bootstrap.Tab(button).show();
+            if (options.store !== false) {
+                try { sessionStorage.setItem(storageKey, panelSelector); } catch (error) {}
+            }
+            setTimeout(() => {
+                if (panelSelector === '#chat-panel') {
+                    scrollChatToBottom(options.smooth);
+                    if (options.focusComposer && composerTextarea) {
+                        composerTextarea.focus({ preventScroll: true });
+                    }
+                }
+            }, 90);
+        }
+
+        scrollChatToBottom();
+
+        document.querySelectorAll('#collaborationTabs button[data-bs-toggle="tab"]').forEach((button) => {
+            button.addEventListener('shown.bs.tab', function () {
+                const target = this.getAttribute('data-bs-target');
+                try { sessionStorage.setItem(storageKey, target); } catch (error) {}
+                if (target === '#chat-panel') {
+                    scrollChatToBottom();
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-tab-target][data-tab-button]').forEach((element) => {
+            element.addEventListener('click', function (event) {
+                event.preventDefault();
+                activateTab(this.getAttribute('data-tab-button'), this.getAttribute('data-tab-target'), { smooth: true });
+            });
+        });
+
+        const shouldOpenChat = window.location.hash === '#message-composer' || window.location.hash === '#chat-panel';
+        let savedTab = null;
+        try { savedTab = sessionStorage.getItem(storageKey); } catch (error) {}
+        if (shouldOpenChat) {
+            activateTab('#chat-tab', '#chat-panel', { store: true, focusComposer: false });
+        } else if (savedTab && savedTab !== '#overview-panel') {
+            const savedButton = document.querySelector(`#collaborationTabs button[data-bs-target="${savedTab}"]`);
+            if (savedButton) {
+                activateTab(`#${savedButton.id}`, savedTab, { store: false });
+            }
+        }
+
+        if (composer && composerTextarea) {
+            const autoSizeTextarea = () => {
+                composerTextarea.style.height = '0px';
+                composerTextarea.style.height = Math.min(composerTextarea.scrollHeight, 140) + 'px';
+            };
+            autoSizeTextarea();
+            composerTextarea.addEventListener('input', autoSizeTextarea);
+            composerTextarea.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (this.value.trim()) {
+                        composer.requestSubmit();
+                    }
+                }
+            });
+            composer.addEventListener('submit', function () {
+                try { sessionStorage.setItem(storageKey, '#chat-panel'); } catch (error) {}
+            });
+        }
+
+        const chatFab = document.querySelector('.workspace-chat-fab');
+        if (chatFab) {
+            chatFab.addEventListener('click', function (event) {
+                event.preventDefault();
+                activateTab('#chat-tab', '#chat-panel', { smooth: true, focusComposer: true });
+            });
+        }
+
+        const flagModal = document.getElementById('flagMessageModal');
+        const flagForm = document.getElementById('flag-message-form');
+        const flagPreview = document.getElementById('flag-target-preview');
+        const flagButtons = document.querySelectorAll('.flag-message-btn');
+
+        if (flagForm && flagButtons.length) {
+            flagButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    const messageId = this.getAttribute('data-message-id');
+                    const senderName = this.getAttribute('data-message-sender');
+                    flagForm.setAttribute('action', `/messages/${messageId}/flag`);
+                    if (flagPreview) {
+                        flagPreview.textContent = `You are reporting a message sent by ${senderName}.`;
+                    }
+                });
+            });
+        }
+
+        if (flagModal) {
+            flagModal.addEventListener('hidden.bs.modal', function () {
+                if (flagForm) {
+                    flagForm.reset();
+                    flagForm.setAttribute('action', '');
+                }
+                if (flagPreview) {
+                    flagPreview.textContent = '';
+                }
+            });
+        }
+    })();
+</script>
+{% endblock %}

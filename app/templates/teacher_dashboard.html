@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Teacher workspace</span>
+            <h1 class="mb-1">Learning Hub teacher dashboard</h1>
+            <p class="text-muted mb-0">Manage your teaching permissions and submit new Learning Hub courses for review.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.create_course') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Create course</a>
+            <a href="{{ url_for('main.my_teaching_applications') }}" class="btn btn-outline-secondary">My applications</a>
+        </div>
+    </div>
+</div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card border-0 h-100">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Approved teaching permissions</h4>
+                {% for permission in permissions %}
+                <div class="border rounded-4 p-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <strong>{{ permission.skill.title }}</strong>
+                        <span class="badge text-bg-success">Approved</span>
+                    </div>
+                    <div class="small text-muted d-grid gap-1">
+                        <div><strong class="text-dark">Your skill level:</strong> {{ permission.skill.normalized_skill_level() }}</div>
+                        <div><strong class="text-dark">You can teach up to:</strong> {{ permission.max_teaching_level }}</div>
+                        <div><strong class="text-dark">Approved:</strong> {{ permission.approved_at_display() or 'Recently' }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state-card py-4">
+                    <i class="bi bi-shield-lock"></i>
+                    <h5 class="mt-3 mb-2">No approved teaching permissions</h5>
+                    <p class="text-muted mb-0">Apply from one of your Intermediate or Advanced skills first.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card border-0 h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <h4 class="mb-0">My Learning Hub courses</h4>
+                    <a href="{{ url_for('main.create_course') }}" class="btn btn-outline-primary btn-sm">New course</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Skill</th>
+                                <th>Level</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for course in courses %}
+                            <tr>
+                                <td>
+                                    <strong>{{ course.title }}</strong>
+                                    <div class="text-muted small">{{ course.created_at_display() }}</div>
+                                </td>
+                                <td>{{ course.skill_name }}</td>
+                                <td><span class="badge text-bg-light border">{{ course.level }}</span></td>
+                                <td>
+                                    <span class="badge {% if course.status == 'Published' %}text-bg-success{% elif course.status == 'Rejected' %}text-bg-danger{% else %}text-bg-warning{% endif %}">{{ course.status }}</span>
+                                    {% if course.review_note %}<div class="small text-muted mt-1">{{ course.review_note }}</div>{% endif %}
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('main.teacher_course_detail', course_id=course.id) }}" class="btn btn-outline-primary btn-sm">Manage course</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-center text-muted py-4">No courses created yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

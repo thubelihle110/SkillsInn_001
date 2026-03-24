@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="page-hero__content">
+        <span class="section-eyebrow">Certification review</span>
+        <h1 class="page-title mb-2">Certification Verifications</h1>
+        <p class="page-subtitle mb-0">Review submitted proof, see whether evidence was already opened, and move quickly through the next pending decisions.</p>
+    </div>
+    <div class="page-hero__actions">
+        <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">Back to Dashboard</a>
+    </div>
+</section>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-card--warning h-100">
+            <div class="stat-card__label">Awaiting view</div>
+            <div class="stat-card__value">{{ unviewed_pending_count }}</div>
+            <div class="stat-card__hint">Pending items still locked for decisions</div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-card--success h-100">
+            <div class="stat-card__label">Viewed pending</div>
+            <div class="stat-card__value">{{ viewed_pending_count }}</div>
+            <div class="stat-card__hint">Ready for approval or rejection</div>
+        </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="toolbar-card h-100">
+            <div class="toolbar-card__row">
+                {% for option in ['All', 'Awaiting Verification', 'Verified', 'Rejected'] %}
+                    <a href="{{ url_for('main.admin_verifications', status=option) }}"
+                       class="btn rounded-pill px-3 {% if status_filter == option %}{% if option == 'Awaiting Verification' %}btn-warning{% elif option == 'Verified' %}btn-success{% elif option == 'Rejected' %}btn-danger{% else %}btn-dark{% endif %}{% else %}{% if option == 'Awaiting Verification' %}btn-outline-warning{% elif option == 'Verified' %}btn-outline-success{% elif option == 'Rejected' %}btn-outline-danger{% else %}btn-outline-dark{% endif %}{% endif %}">
+                        {{ option }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="app-card">
+    <div class="app-card__body">
+        {% if skills %}
+            <div class="table-responsive">
+                <table class="table app-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Skill</th>
+                            <th>Owner</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Certificate</th>
+                            <th>Submitted</th>
+                            <th>Reviewed</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for skill in skills %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ skill.title }}</div>
+                                <div class="small text-muted">{{ skill.review_stage_label() }}</div>
+                            </td>
+                            <td>{{ skill.owner.full_name }}</td>
+                            <td>{{ skill.display_category() }}</td>
+                            <td>
+                                {% if skill.verification_status == "Verified" %}
+                                    <span class="badge text-bg-success">Verified</span>
+                                {% elif skill.verification_status == "Awaiting Verification" %}
+                                    <span class="badge text-bg-warning">Awaiting Verification</span>
+                                {% elif skill.verification_status == "Rejected" %}
+                                    <span class="badge text-bg-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">{{ skill.verification_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if skill.certificate_viewed_by_admin %}
+                                    <span class="badge verification-view-badge verification-view-badge--viewed">Viewed</span>
+                                    <div class="small text-muted mt-1">{{ skill.certificate_viewed_at_display() or 'Logged' }}</div>
+                                {% else %}
+                                    <span class="badge verification-view-badge verification-view-badge--locked">Not viewed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ skill.created_at_display() or skill.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if skill.verified_at %}
+                                    {{ skill.reviewed_at_display() or skill.verified_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('main.admin_skill_detail', skill_id=skill.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    {% if skill.certificate_viewed_by_admin %}Review decision{% else %}Open review{% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state empty-state--compact">
+                <div class="empty-state__title">No skills found</div>
+                <p class="empty-state__text mb-0">There are no certification items for the selected filter.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

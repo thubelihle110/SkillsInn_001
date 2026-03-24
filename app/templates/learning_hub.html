@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Learning Hub</span>
+            <h1 class="mb-1">Learn and grow your skills</h1>
+            <p class="text-muted mb-0">Search published courses instantly, filter by level or category, and explore the Learning Hub without page reloads.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.teacher_dashboard') }}" class="btn btn-outline-secondary">Teacher dashboard</a>
+            <a href="{{ url_for('main.my_teaching_applications') }}" class="btn btn-primary">My teaching applications</a>
+        </div>
+    </div>
+</div>
+
+<form method="GET" action="{{ url_for('main.learning_hub') }}" class="filter-toolbar mb-4" id="learning-hub-filter-form">
+    <div class="row g-3 align-items-center">
+        <div class="col-lg-5">
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <input type="text" name="search" id="learning-hub-search-input" class="form-control ps-5" placeholder="Search by course title, skill, or category" value="{{ selected_search or '' }}" autocomplete="off">
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <select name="level" id="learning-hub-level-filter" class="form-select">
+                <option value="">All levels</option>
+                <option value="Beginner" {% if selected_level == "Beginner" %}selected{% endif %}>Beginner</option>
+                <option value="Intermediate" {% if selected_level == "Intermediate" %}selected{% endif %}>Intermediate</option>
+                <option value="Advanced" {% if selected_level == "Advanced" %}selected{% endif %}>Advanced</option>
+            </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <select name="category" id="learning-hub-category-filter" class="form-select">
+                <option value="">All categories</option>
+                {% for category_name in categories or [] %}
+                    <option value="{{ category_name }}" {% if selected_category == category_name %}selected{% endif %}>{{ category_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-6 col-lg-2">
+            <select name="sort" id="learning-hub-sort-filter" class="form-select">
+                <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Newest first</option>
+                <option value="oldest" {% if selected_sort == "oldest" %}selected{% endif %}>Oldest first</option>
+                <option value="title_asc" {% if selected_sort == "title_asc" %}selected{% endif %}>Title A-Z</option>
+            </select>
+        </div>
+        <div class="col-sm-6 col-lg-1 d-grid">
+            <a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="small text-muted" id="learning-hub-live-status">Showing matching courses</div>
+    <div class="small text-primary d-none" id="learning-hub-live-loading">Searching...</div>
+</div>
+
+<div id="learning-hub-results">
+    {% include "_learning_hub_results.html" %}
+</div>
+{% endblock %}

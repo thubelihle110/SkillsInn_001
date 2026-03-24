@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4 learning-hero-card">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">{{ course.skill_category }}</span>
+            <h1 class="mb-1">{{ course.title }}</h1>
+            <p class="text-muted mb-0">{{ course.description }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="badge text-bg-primary align-self-start">{{ course.level }}</span>
+            <a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a>
+        </div>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
+            <div class="row g-3 small text-muted">
+                <div class="col-md-6"><strong class="text-dark">Teacher:</strong> {{ course.creator.full_name }}</div>
+                <div class="col-md-6"><strong class="text-dark">Final test pass mark:</strong> {{ course.pass_mark }}%</div>
+                <div class="col-md-6"><strong class="text-dark">Required chapters:</strong> {{ course.required_chapter_count() }}</div>
+                <div class="col-md-6"><strong class="text-dark">Final test questions:</strong> {{ course.final_exam_question_count() }}</div>
+                <div class="col-md-6"><strong class="text-dark">Timer:</strong> {% if course.final_exam_duration_minutes %}{{ course.final_exam_duration_minutes }} minute(s){% else %}Not set{% endif %}</div>
+                <div class="col-md-6"><strong class="text-dark">Attempts:</strong> {{ course.attempts_limit_label() }}</div>
+            </div>
+            {% if course.created_by_user_id == current_user.id %}
+            <div class="alert alert-info mt-4 mb-0">You created this course, so enrollment is disabled for you. Use the teacher workspace to manage it.</div>
+            {% elif not enrollment %}
+            <form method="POST" action="{{ url_for('main.enroll_learning_course', course_id=course.id) }}" class="mt-4 d-flex gap-2 flex-wrap"><button type="submit" class="btn btn-primary">Enroll in course</button><a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a></form>
+            {% else %}
+            <div class="rounded-4 border p-3 bg-light mt-4"><div class="d-flex justify-content-between small mb-2"><strong>My progress</strong><span>{{ enrollment.progress_percent() }}%</span></div><div class="progress" style="height: 8px;"><div class="progress-bar" role="progressbar" style="width: {{ enrollment.progress_percent() }}%;"></div></div><div class="small text-muted mt-2">{{ enrollment.completed_required_chapter_count() }}/{{ course.required_chapter_count() }} required chapters complete{% if enrollment.final_exam_passed %} · Final test passed{% endif %}</div></div>
+            {% endif %}
+        </div></div>
+        <div class="card border-0 shadow-sm"><div class="card-body p-4"><div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-3"><h4 class="mb-0">Course chapters</h4><span class="badge text-bg-light border">{{ course.chapter_count() }} chapter(s)</span></div>{% for chapter in course.chapters %}{% set progress = enrollment.progress_for_chapter(chapter.id) if enrollment else none %}<div class="border rounded-4 p-3 mb-3 learning-preview-card"><div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2"><div><div class="small text-muted">Chapter {{ chapter.chapter_order }}</div><h5 class="mb-0">{{ chapter.title }}</h5></div><div class="d-flex gap-2 flex-wrap">{% if chapter.is_required %}<span class="badge text-bg-warning">Required</span>{% endif %}{% if chapter.has_quiz() %}<span class="badge text-bg-info">Quiz</span>{% endif %}{% if progress and progress.is_completed %}<span class="badge text-bg-success">Completed</span>{% endif %}</div></div><p class="text-muted mb-3">{{ chapter.content }}</p>{% if enrollment %}{% if enrollment.is_chapter_unlocked(chapter) %}<a href="{{ url_for('main.learning_chapter_detail', course_id=course.id, chapter_id=chapter.id) }}" class="btn btn-outline-primary btn-sm">Open chapter</a>{% else %}<button type="button" class="btn btn-outline-secondary btn-sm" disabled>Locked</button>{% endif %}{% else %}<span class="badge text-bg-light border">Enroll to open chapter</span>{% endif %}</div>{% endfor %}</div></div>
+    </div>
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4"><h4 class="mb-3">Final test</h4><div class="small text-muted d-grid gap-2"><div><strong class="text-dark">Scoring:</strong> each correct answer contributes to your final percentage.</div><div><strong class="text-dark">Pass mark:</strong> {{ course.pass_mark }}%</div><div><strong class="text-dark">Attempts:</strong> {% if enrollment %}{% set remaining = enrollment.attempts_remaining() %}{% if remaining is none %}Unlimited{% else %}{{ remaining }} remaining{% endif %}{% else %}{{ course.attempts_limit_label() }}{% endif %}</div></div>{% if enrollment and enrollment.all_required_chapters_completed() and course.final_exam_question_count() > 0 and enrollment.can_take_final_exam() %}<a href="{{ url_for('main.learning_final_exam', course_id=course.id) }}" class="btn btn-primary w-100 mt-3">Take test</a>{% elif enrollment and not enrollment.can_take_final_exam() %}<div class="alert alert-danger mt-3 mb-0">No attempts remaining.</div>{% else %}<div class="alert alert-light mt-3 mb-0">Finish the required chapters first.</div>{% endif %}</div></div>
+        <div class="card border-0 shadow-sm"><div class="card-body p-4"><h4 class="mb-3">Navigation</h4><div class="d-grid gap-2"><a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a>{% if enrollment %}<a href="{{ url_for('main.my_learning') }}" class="btn btn-outline-secondary">Back to My learning</a><form method="POST" action="{{ url_for('main.unenroll_learning_course', course_id=course.id) }}" onsubmit="return confirm('Unenroll from this course? Your current course progress will be removed.');"><button type="submit" class="btn btn-outline-danger w-100">Unenroll</button></form>{% endif %}</div></div></div>
+    </div>
+</div>
+{% endblock %}

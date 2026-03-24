@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Requester workspace</span>
+            <h1 class="mb-1">My help requests</h1>
+            <p class="text-muted mb-0">Manage your open requests, review progress, and move quickly into applicant selection.</p>
+        </div>
+        <a href="{{ url_for('main.create_help_request') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Create request
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for help_request in requests %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-0">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <span class="badge text-bg-light border">{{ help_request.display_category() }}</span>
+                    <span class="badge {% if help_request.status == 'Open' %}text-bg-success{% elif help_request.status == 'Under Review' %}text-bg-warning{% elif help_request.status == 'Completed' %}text-bg-primary{% else %}text-bg-secondary{% endif %}">{{ help_request.status }}</span>
+                </div>
+
+                <h4 class="mb-2">{{ help_request.title }}</h4>
+                <p class="text-muted mb-4">{{ help_request.description[:150] }}{% if help_request.description|length > 150 %}...{% endif %}</p>
+
+                <div class="small text-muted d-grid gap-2 mb-4">
+                    <div><strong class="text-dark">Location:</strong> {{ help_request.full_location() }}</div>
+                    <div><strong class="text-dark">Schedule:</strong> {{ help_request.schedule_display() }}</div>
+                    <div><strong class="text-dark">Urgency:</strong> {{ help_request.urgency }}</div>
+                    <div><strong class="text-dark">Date posted:</strong> {{ help_request.created_at.strftime('%Y-%m-%d') }}</div>
+                </div>
+
+                <div class="mt-auto d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('main.help_request_detail', request_id=help_request.id) }}" class="btn btn-outline-primary btn-sm">View</a>
+                    <a href="{{ url_for('main.view_request_applications', request_id=help_request.id) }}" class="btn btn-outline-success btn-sm">Applicants</a>
+                    {% if help_request.status not in ['In Progress', 'Completed'] %}
+                        <a href="{{ url_for('main.edit_help_request', request_id=help_request.id) }}" class="btn btn-outline-secondary btn-sm">Edit</a>
+                        <form method="POST" action="{{ url_for('main.delete_help_request', request_id=help_request.id) }}" onsubmit="return confirm('Delete this help request?');" class="d-inline">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="empty-state-card">
+            <i class="bi bi-clipboard-plus"></i>
+            <h4 class="mt-3 mb-2">You have not created any help requests yet</h4>
+            <p class="text-muted mb-3">Create your first request to start receiving applications from providers in the community.</p>
+            <a href="{{ url_for('main.create_help_request') }}" class="btn btn-primary btn-sm">Create first request</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

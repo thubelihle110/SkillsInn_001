@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-xl-5">
+        <section class="auth-shell">
+            <div class="auth-card">
+                <div class="auth-card__header text-center">
+                    <span class="section-eyebrow">First-time security step</span>
+                    <h1 class="auth-title">Complete Admin Setup</h1>
+                    <p class="auth-subtitle">Update the default admin email and password before continuing into the console.</p>
+                </div>
+
+                <form method="POST" class="auth-form">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label fw-semibold") }}
+                        {{ form.email(class="form-control form-control-lg") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label fw-semibold") }}
+                        {{ form.password(class="form-control form-control-lg") }}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.confirm_password.label(class="form-label fw-semibold") }}
+                        {{ form.confirm_password(class="form-control form-control-lg") }}
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary btn-lg rounded-pill") }}
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

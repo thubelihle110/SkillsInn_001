@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="page-header-card mb-4 learning-hero-card">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Teacher workspace</span>
+                    <h1 class="mb-1">Create Learning Hub course</h1>
+                    <p class="text-muted mb-0">Use the guided sections below to create a course that feels familiar and easy for learners to follow.</p>
+                </div>
+                <a href="{{ url_for('main.teacher_dashboard') }}" class="btn btn-outline-secondary">Back to dashboard</a>
+            </div>
+        </div>
+
+        <form method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="card border-0 shadow-sm overflow-hidden">
+                <div class="card-body p-0">
+                    <ul class="nav nav-tabs learning-form-tabs px-4 pt-4" id="courseCreateTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="course-basics-tab" data-bs-toggle="tab" data-bs-target="#course-basics" type="button" role="tab">Course basics</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="course-assessment-tab" data-bs-toggle="tab" data-bs-target="#course-assessment" type="button" role="tab">Assessment setup</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content p-4 p-lg-5">
+                        <div class="tab-pane fade show active" id="course-basics" role="tabpanel">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Skill to teach</label>
+                                    {{ form.skill_id(class="form-select", id="skill_id") }}
+                                    <div class="form-text">Only approved teaching skills appear here.</div>
+                                    {% for error in form.skill_id.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Course level</label>
+                                    {{ form.level(class="form-select", id="course_level") }}
+                                    <div class="form-text">Levels update automatically based on your teaching permission.</div>
+                                    {% for error in form.level.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Course title</label>
+                                    {{ form.title(class="form-control", placeholder="Example: Graphic Design Fundamentals for Beginners") }}
+                                    {% for error in form.title.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Course description</label>
+                                    {{ form.description(class="form-control", rows="7", placeholder="Describe what learners will cover, who the course is for, and what they should expect by the end.") }}
+                                    {% for error in form.description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="course-assessment" role="tabpanel">
+                            <div class="row g-4 align-items-start">
+                                <div class="col-lg-4">
+                                    <div class="learning-checklist-card h-100">
+                                        <span class="learning-checklist-step">✓</span>
+                                        <h6>Pass mark</h6>
+                                        <p class="text-muted small mb-0">Set the overall final test pass mark now. Timers and questions can be refined after the course is created.</p>
+                                    </div>
+                                </div>
+                                <div class="col-lg-8">
+                                    <label class="form-label">Final pass mark (%)</label>
+                                    {{ form.pass_mark(class="form-control", min="50", max="100") }}
+                                    <div class="form-text">Chapter quizzes use the built-in 60% pass requirement. Final test settings are completed inside the teacher workspace.</div>
+                                    {% for error in form.pass_mark.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('main.teacher_dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    window.learningHubLevelOptions = {{ level_options_by_skill|tojson }};
+    document.addEventListener('DOMContentLoaded', function () {
+        const skillSelect = document.getElementById('skill_id');
+        const levelSelect = document.getElementById('course_level');
+
+        function refreshLevels() {
+            if (!skillSelect || !levelSelect) return;
+            const selectedSkill = skillSelect.value;
+            const options = window.learningHubLevelOptions[selectedSkill] || [];
+            const currentValue = levelSelect.value;
+            levelSelect.innerHTML = '';
+            options.forEach(function (level) {
+                const option = document.createElement('option');
+                option.value = level;
+                option.textContent = level;
+                if (level === currentValue) {
+                    option.selected = true;
+                }
+                levelSelect.appendChild(option);
+            });
+            if (!levelSelect.value && levelSelect.options.length > 0) {
+                levelSelect.options[0].selected = true;
+            }
+        }
+
+        if (skillSelect) {
+            skillSelect.addEventListener('change', refreshLevels);
+            refreshLevels();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Requester workspace</span>
+            <h1 class="mb-1">Create help request</h1>
+            <p class="text-muted mb-0">Describe the work clearly so providers can judge fit, travel, and availability quickly.</p>
+        </div>
+        <a href="{{ url_for('main.my_help_requests') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to my requests
+        </a>
+    </div>
+</div>
+
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge text-bg-light border">Section 1</span>
+                        <h3 class="mb-0">Request details</h3>
+                    </div>
+                    <p class="text-muted mb-4">Give the request a clear category, title, and description.</p>
+
+                    <div class="mb-3">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-select", id="category") }}
+                        {% for error in form.category.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.custom_category.label(class="form-label") }}
+                        {{ form.custom_category(class="form-control", id="custom_category", placeholder="Only enabled when 'Other' is selected") }}
+                        {% for error in form.custom_category.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control", placeholder="Example: Need help repairing my laptop screen") }}
+                        {% for error in form.title.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-0">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="6", placeholder="Describe the work, expected result, tools involved, and anything a provider should know before applying.") }}
+                        {% for error in form.description.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 mb-4">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge text-bg-light border">Section 2</span>
+                        <h3 class="mb-0">Location</h3>
+                    </div>
+                    <p class="text-muted mb-4">Use the address where the work will happen. This supports provider matching and future distance features.</p>
+
+                    <div class="mb-3">
+                        {{ form.street_address.label(class="form-label") }}
+                        {{ form.street_address(class="form-control", placeholder="Street number and street name") }}
+                        {% for error in form.street_address.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            {{ form.suburb.label(class="form-label") }}
+                            {{ form.suburb(class="form-control") }}
+                            {% for error in form.suburb.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.city.label(class="form-label") }}
+                            {{ form.city(class="form-control") }}
+                            {% for error in form.city.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.postal_code.label(class="form-label") }}
+                            {{ form.postal_code(class="form-control") }}
+                            {% for error in form.postal_code.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="badge text-bg-light border">Section 3</span>
+                        <h3 class="mb-0">Schedule and requirements</h3>
+                    </div>
+                    <p class="text-muted mb-4">Choose when the work is needed and what kind of provider experience is required.</p>
+
+                    <div class="mb-3">
+                        {{ form.schedule_type.label(class="form-label") }}
+                        {{ form.schedule_type(class="form-select", id="schedule_type") }}
+                        {% for error in form.schedule_type.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div id="one-time-fields" class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                {{ form.date_needed.label(class="form-label") }}
+                                {{ form.date_needed(class="form-control", type="date", id="date_needed") }}
+                                {% for error in form.date_needed.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="date-range-fields" class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                {{ form.start_date.label(class="form-label") }}
+                                {{ form.start_date(class="form-control", type="date", id="start_date") }}
+                                {% for error in form.start_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.end_date.label(class="form-label") }}
+                                {{ form.end_date(class="form-control", type="date", id="end_date") }}
+                                {% for error in form.end_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weekly-fields" class="mb-4">
+                        <label class="form-label">Select working days</label>
+                        <div class="row g-2">
+                            {% set weekday_values = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}
+                            {% set selected_weekdays = request.form.getlist("recurrence_days") %}
+                            {% for day in weekday_values %}
+                            <div class="col-md-3 col-6">
+                                <div class="form-check border rounded-3 p-2">
+                                    <input class="form-check-input" type="checkbox" name="recurrence_days" value="{{ day }}" id="day_{{ day }}" {% if day in selected_weekdays %}checked{% endif %}>
+                                    <label class="form-check-label" for="day_{{ day }}">{{ day }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.recurrence_days.errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
+                        <div class="form-text mt-2">Select the weekdays on which the work repeats.</div>
+                    </div>
+
+                    <div id="monthly-fields" class="mb-4">
+                        <label class="form-label">Select days of the month</label>
+                        <div class="row g-2">
+                            {% set selected_month_days = request.form.getlist("monthly_dates") %}
+                            {% for day in range(1, 32) %}
+                            <div class="col-md-2 col-3">
+                                <div class="form-check border rounded-3 p-2 text-center">
+                                    <input class="form-check-input" type="checkbox" name="monthly_dates" value="{{ day }}" id="month_day_{{ day }}" {% if day|string in selected_month_days %}checked{% endif %}>
+                                    <label class="form-check-label" for="month_day_{{ day }}">{{ day }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.monthly_dates.errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
+                        <div class="form-text mt-2">Example: select 5 and 20 if the work is needed on the 5th and 20th each month.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            {{ form.start_time.label(class="form-label") }}
+                            {{ form.start_time(class="form-control", type="time", id="start_time") }}
+                            {% for error in form.start_time.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form.end_time.label(class="form-label") }}
+                            {{ form.end_time(class="form-control", type="time", id="end_time") }}
+                            {% for error in form.end_time.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        {{ form.time_flexible(class="form-check-input") }}
+                        {{ form.time_flexible.label(class="form-check-label") }}
+                    </div>
+
+                    <div class="info-strip mb-4">
+                        <div class="fw-semibold mb-2">Scheduling tip</div>
+                        <p class="mb-0 text-muted">Use precise schedules when possible. Providers are more likely to apply when timing expectations are clear.</p>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.urgency.label(class="form-label") }}
+                            {{ form.urgency(class="form-select") }}
+                            {% for error in form.urgency.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.experience_level_required.label(class="form-label") }}
+                            {{ form.experience_level_required(class="form-select") }}
+                            {% for error in form.experience_level_required.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 mb-4 sticky-lg-top" style="top: 6.5rem;">
+                <div class="card-body p-4">
+                    <h4 class="mb-3">Before you publish</h4>
+                    <div class="small text-muted d-grid gap-3 mb-4">
+                        <div><strong class="d-block text-dark mb-1">Be specific</strong>State the exact work so applicants know whether they can deliver.</div>
+                        <div><strong class="d-block text-dark mb-1">Add the correct location</strong>A clear address helps with trust and travel planning.</div>
+                        <div><strong class="d-block text-dark mb-1">Set realistic timing</strong>Clear dates and times improve response quality.</div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('main.my_help_requests') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}

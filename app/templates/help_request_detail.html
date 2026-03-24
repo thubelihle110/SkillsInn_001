@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+{% set requester_avg = help_request.requester.average_requester_rating_received() %}
+{% set requester_count = help_request.requester.requester_rating_count_received() %}
+
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-start gap-3">
+        <div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge text-bg-light border">{{ help_request.display_category() }}</span>
+                <span class="badge {% if help_request.status == 'Open' %}text-bg-success{% elif help_request.status == 'Under Review' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ help_request.status }}</span>
+            </div>
+            <h1 class="mb-2">{{ help_request.title }}</h1>
+            <p class="text-muted mb-2">Requested by {{ help_request.requester.full_name }}</p>
+            <div class="small">
+                {% if requester_count %}
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <span style="color: #d4af37; font-size: 1.1rem; letter-spacing: 0.08rem;">
+                            {% for i in range(1, 6) %}
+                                {% if requester_avg >= i %}★{% else %}☆{% endif %}
+                            {% endfor %}
+                        </span>
+                        <span class="fw-semibold">{{ requester_avg }}/5</span>
+                        <span class="text-muted">Requester rating · {{ requester_count }} rating{{ '' if requester_count == 1 else 's' }}</span>
+                    </div>
+                {% else %}
+                    <span class="text-muted">This requester has no ratings yet.</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main.help_requests') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to requests
+            </a>
+            {% if current_user.id == help_request.requester_id %}
+                <a href="{{ url_for('main.view_request_applications', request_id=help_request.id) }}" class="btn btn-primary">
+                    <i class="bi bi-people me-2"></i>View applicants
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card border-0 mb-4">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Request description</h4>
+                <p class="mb-0">{{ help_request.description }}</p>
+            </div>
+        </div>
+
+        {% if current_user.id != help_request.requester_id and skill_match_info %}
+            {% if skill_match_info.skills_match %}
+                <div class="app-alert alert alert-success mb-4">
+                    <strong>Your skills match this request.</strong>
+                    <div class="mt-1">Matched category: {{ skill_match_info.matched_category_name }}</div>
+                </div>
+            {% else %}
+                <div class="app-alert alert alert-warning mb-4">
+                    {% if skill_match_info.user_has_skills %}
+                        <strong>This request does not match your current skill categories.</strong>
+                        <div class="mt-1">No matching skill category found for: {{ skill_match_info.request_category_name }}</div>
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <a href="{{ url_for('main.my_skills', next=url_for('main.apply_to_help_request', request_id=help_request.id)) }}" class="btn btn-outline-dark btn-sm">Update my skills</a>
+                            <a href="{{ url_for('main.apply_to_help_request', request_id=help_request.id) }}?resume_mode=custom" class="btn btn-outline-primary btn-sm">Upload CV instead</a>
+                        </div>
+                    {% else %}
+                        <strong>You have not added any skills yet.</strong>
+                        <div class="mt-1">Add your skills to improve request matching for this category: {{ skill_match_info.request_category_name }}</div>
+                        <div class="mt-3 d-flex gap-2 flex-wrap">
+                            <a href="{{ url_for('main.add_skill', next=url_for('main.apply_to_help_request', request_id=help_request.id)) }}" class="btn btn-outline-dark btn-sm">Add skill</a>
+                            <a href="{{ url_for('main.apply_to_help_request', request_id=help_request.id) }}?resume_mode=custom" class="btn btn-outline-primary btn-sm">Upload CV instead</a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card border-0 mb-4">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Request details</h4>
+                <div class="d-grid gap-3 small">
+                    <div><strong class="d-block text-dark mb-1">Location</strong><span class="text-muted">{{ help_request.full_location() }}</span></div>
+                    <div><strong class="d-block text-dark mb-1">Schedule</strong><span class="text-muted">{{ help_request.schedule_display() }}</span></div>
+                    <div><strong class="d-block text-dark mb-1">Urgency</strong><span class="text-muted">{{ help_request.urgency }}</span></div>
+                    <div><strong class="d-block text-dark mb-1">Experience required</strong><span class="text-muted">{{ help_request.experience_level_required }}</span></div>
+                    <div><strong class="d-block text-dark mb-1">Applications</strong><span class="text-muted">{{ application_count }}</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Actions</h4>
+                {% if current_user.id == help_request.requester_id %}
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('main.view_request_applications', request_id=help_request.id) }}" class="btn btn-primary">View applicants</a>
+                        {% if collaboration %}
+                            <a href="{{ url_for('main.collaboration_detail', collaboration_id=collaboration.id) }}" class="btn btn-success">Open collaboration</a>
+                        {% endif %}
+                        {% if help_request.status not in ['In Progress', 'Completed'] %}
+                            <a href="{{ url_for('main.edit_help_request', request_id=help_request.id) }}" class="btn btn-outline-secondary">Edit request</a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    {% if help_request.status in ["Open", "Under Review"] %}
+                        {% if existing_application %}
+                            <div class="app-alert alert alert-info mb-0">
+                                <strong>You have already applied to this request.</strong>
+                                <div class="mt-1">You can track updates from your applications page.</div>
+                            </div>
+                        {% else %}
+                            <div class="d-grid gap-2">
+                                <a href="{{ url_for('main.apply_to_help_request', request_id=help_request.id) }}" class="btn btn-success">Apply to help</a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="app-alert alert alert-warning mb-0">This request is not currently accepting applications.</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

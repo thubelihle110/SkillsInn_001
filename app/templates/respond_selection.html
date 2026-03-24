@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="mb-2">Respond to Selection</h2>
+                <p class="text-muted mb-3">
+                    You were selected for: <strong>{{ help_request.title }}</strong>
+                </p>
+
+                {% set requester_avg = help_request.requester.average_requester_rating_received() %}
+                {% set requester_count = help_request.requester.requester_rating_count_received() %}
+                <div class="mb-4">
+                    <div class="small text-muted mb-1">Requester reputation</div>
+                    {% if requester_count %}
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span style="color: #d4af37; font-size: 1.15rem; letter-spacing: 0.08rem;">
+                                {% for i in range(1, 6) %}
+                                    {% if requester_avg >= i %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="fw-semibold">{{ requester_avg }}/5</span>
+                            <span class="text-muted small">{{ requester_count }} rating{{ '' if requester_count == 1 else 's' }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-muted small">This requester has no ratings yet.</div>
+                    {% endif %}
+                </div>
+
+                <div class="card border-0 bg-light mb-4">
+                    <div class="card-body">
+                        <h5 class="mb-3">Request Summary</h5>
+                        <p class="mb-1"><strong>Category:</strong> {{ help_request.display_category() }}</p>
+                        <p class="mb-1"><strong>Location:</strong> {{ help_request.full_location() }}</p>
+                        <p class="mb-1"><strong>Schedule:</strong> {{ help_request.schedule_display() }}</p>
+                        <p class="mb-1"><strong>Urgency:</strong> {{ help_request.urgency }}</p>
+                        <p class="mb-0"><strong>Experience Required:</strong> {{ help_request.experience_level_required }}</p>
+                    </div>
+                </div>
+
+                {% set has_conflict = conflict_info is defined and conflict_info and conflict_info.has_conflict %}
+
+                {% if has_conflict %}
+                    <div class="alert alert-danger">
+                        <strong>Schedule conflict detected.</strong><br>
+                        You cannot accept this request because it overlaps with another accepted request in your calendar.
+                        {% if conflict_info.conflict_message %}
+                            <div class="mt-2">{{ conflict_info.conflict_message }}</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <form method="POST" id="respond-selection-form" data-has-conflict="{{ 'true' if has_conflict else 'false' }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.decision.label(class="form-label") }}
+                        {{ form.decision(class="form-select", id="decision") }}
+                        {% for error in form.decision.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="alert alert-success d-none" id="accept-info-box">
+                        <strong>You are accepting this request.</strong><br>
+                        By accepting, you confirm that you are available and ready to assist with this request.
+                    </div>
+
+                    <div class="alert alert-warning d-none" id="decline-info-box">
+                        <strong>You are declining this request.</strong><br>
+                        Please tell the requester why you are declining so they can choose another applicant if needed.
+                    </div>
+
+                    <div class="mb-3" id="decline-reason-wrapper">
+                        {{ form.decline_reason.label(class="form-label") }}
+                        {{ form.decline_reason(class="form-select", id="decline_reason") }}
+                        {% for error in form.decline_reason.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3" id="other-decline-reason-wrapper">
+                        {{ form.other_decline_reason.label(class="form-label") }}
+                        {{ form.other_decline_reason(class="form-control", id="other_decline_reason", placeholder="Please specify your reason") }}
+                        {% for error in form.other_decline_reason.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary", id="response-submit-btn") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("respond-selection-form");
+    const decisionField = document.getElementById("decision");
+    const declineReasonWrapper = document.getElementById("decline-reason-wrapper");
+    const declineReasonField = document.getElementById("decline_reason");
+    const otherDeclineReasonWrapper = document.getElementById("other-decline-reason-wrapper");
+    const otherDeclineReasonField = document.getElementById("other_decline_reason");
+    const acceptInfoBox = document.getElementById("accept-info-box");
+    const declineInfoBox = document.getElementById("decline-info-box");
+    const submitBtn = document.getElementById("response-submit-btn");
+
+    const hasConflict = form && form.dataset.hasConflict === "true";
+
+    function toggleDeclineFields() {
+        if (!decisionField) return;
+
+        const isDeclined = decisionField.value === "Declined";
+        const isAccepted = decisionField.value === "Accepted";
+        const isOtherReason = declineReasonField && declineReasonField.value === "Other";
+
+        if (declineReasonWrapper) {
+            declineReasonWrapper.style.display = isDeclined ? "block" : "none";
+        }
+
+        if (otherDeclineReasonWrapper) {
+            otherDeclineReasonWrapper.style.display = (isDeclined && isOtherReason) ? "block" : "none";
+        }
+
+        if (!isDeclined) {
+            if (declineReasonField) declineReasonField.value = "";
+            if (otherDeclineReasonField) otherDeclineReasonField.value = "";
+        }
+
+        if (isDeclined && !isOtherReason && otherDeclineReasonField) {
+            otherDeclineReasonField.value = "";
+        }
+
+        if (acceptInfoBox) {
+            acceptInfoBox.classList.toggle("d-none", !isAccepted);
+        }
+
+        if (declineInfoBox) {
+            declineInfoBox.classList.toggle("d-none", !isDeclined);
+        }
+
+        if (submitBtn && hasConflict && isAccepted) {
+            submitBtn.disabled = true;
+            submitBtn.title = "You cannot accept because of a schedule conflict.";
+        } else if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.title = "";
+        }
+    }
+
+    if (decisionField) {
+        decisionField.addEventListener("change", toggleDeclineFields);
+    }
+
+    if (declineReasonField) {
+        declineReasonField.addEventListener("change", toggleDeclineFields);
+    }
+
+    toggleDeclineFields();
+
+    if (form) {
+        form.addEventListener("submit", function (event) {
+            if (decisionField && decisionField.value === "Accepted" && hasConflict) {
+                event.preventDefault();
+                alert("You cannot accept this request because it overlaps with another accepted request in your calendar.");
+                return;
+            }
+
+            if (decisionField && decisionField.value === "Declined") {
+                const confirmed = confirm("Are you sure you want to decline this request?");
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

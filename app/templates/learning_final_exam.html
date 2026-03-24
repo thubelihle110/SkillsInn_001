@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4 learning-hero-card">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Final test</span>
+            <h1 class="mb-1">{{ course.title }}</h1>
+            <p class="text-muted mb-0">Read the instructions below, then complete the test in one sitting.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+            <a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Test instructions</h4>
+                <div class="small text-muted d-grid gap-2">
+                    <div><strong class="text-dark">Questions:</strong> {{ course.final_exam_question_count() }}</div>
+                    <div><strong class="text-dark">Pass mark:</strong> {{ course.pass_mark }}%</div>
+                    <div><strong class="text-dark">Scoring:</strong> each correct answer contributes to your final percentage.</div>
+                    <div><strong class="text-dark">Reward:</strong> passing completes the course and awards {{ course.level }} level for {{ course.skill_name }}.</div>
+                    <div><strong class="text-dark">Timer:</strong> {% if course.final_exam_duration_minutes %}{{ course.final_exam_duration_minutes }} minute(s){% else %}No timer{% endif %}</div>
+                    <div>
+                        <strong class="text-dark">Attempts remaining:</strong>
+                        {% set remaining = enrollment.attempts_remaining() %}
+                        {% if remaining is none %}
+                            Unlimited
+                        {% else %}
+                            {{ remaining }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if course.final_exam_duration_minutes %}
+                <div class="alert alert-warning mt-3 mb-0">
+                    <strong>Time remaining:</strong> <span id="exam-timer">--:--</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('main.submit_learning_final_exam', course_id=course.id) }}" id="final-exam-form">
+                    {% for question in course.final_exam_questions %}
+                    <div class="border rounded-4 p-3 mb-3 learning-preview-card">
+                        <div class="fw-semibold mb-2">{{ loop.index }}. {{ question.question_text }}</div>
+                        {% for option_key, option_value in question.options() %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="final_question_{{ question.id }}" id="final_{{ question.id }}_{{ option_key }}" value="{{ option_key }}">
+                            <label class="form-check-label" for="final_{{ question.id }}_{{ option_key }}">{{ option_key }}. {{ option_value }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary">Submit final test</button>
+                        <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if course.final_exam_duration_minutes %}
+<script>
+(function () {
+    const durationSeconds = {{ course.final_exam_duration_minutes|int }} * 60;
+    const startedAt = {{ started_at|int }};
+    const serverNow = {{ now_timestamp|int }};
+    const timerEl = document.getElementById('exam-timer');
+    const form = document.getElementById('final-exam-form');
+    const clientNowAtLoad = Math.floor(Date.now() / 1000);
+    const offset = clientNowAtLoad - serverNow;
+    const examEndTs = startedAt + durationSeconds;
+    let intervalId = null;
+    let hasAutoSubmitted = false;
+
+    function renderTimer() {
+        const adjustedNow = Math.floor(Date.now() / 1000) - offset;
+        const remaining = Math.max(0, examEndTs - adjustedNow);
+        const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const seconds = String(remaining % 60).padStart(2, '0');
+
+        if (timerEl) {
+            timerEl.textContent = `${minutes}:${seconds}`;
+        }
+
+        if (remaining <= 0 && form && !hasAutoSubmitted) {
+            hasAutoSubmitted = true;
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            form.submit();
+        }
+    }
+
+    renderTimer();
+    intervalId = window.setInterval(renderTimer, 1000);
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Skill marketplace</span>
+            <h1 class="mb-1">Browse skills</h1>
+            <p class="text-muted mb-0">Explore community talent, verification status, and availability before you reach out or apply.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.my_skills') }}" class="btn btn-outline-secondary">My skills</a>
+            <a href="{{ url_for('main.add_skill') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>Add skill</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for skill in skills %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-0">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <span class="badge text-bg-light border">{{ skill.display_category() }}</span>
+                    <span class="skill-badge skill-badge-{{ skill.display_badge_tone() }}">{{ skill.display_badge_label() }}</span>
+                </div>
+
+                <h4 class="mb-2">{{ skill.title }}</h4>
+                <p class="text-muted mb-3">By {{ skill.owner.full_name }}</p>
+                <p class="text-muted mb-4">{{ skill.description[:150] }}{% if skill.description|length > 150 %}...{% endif %}</p>
+
+                <div class="small text-muted d-grid gap-2 mb-4">
+                    <div><strong class="text-dark">Experience:</strong> {{ skill.experience_level }}</div>
+                    <div><strong class="text-dark">Availability:</strong> {{ skill.availability }}</div>
+                    <div><strong class="text-dark">Status:</strong> {{ skill.status }}</div>
+                </div>
+
+                <div class="mt-auto d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('main.skill_detail', skill_id=skill.id) }}" class="btn btn-outline-primary btn-sm">View skill</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="empty-state-card">
+            <i class="bi bi-tools"></i>
+            <h4 class="mt-3 mb-2">No skills available right now</h4>
+            <p class="text-muted mb-0">Once community members publish their skills, they will appear here for browsing.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Assignment</span>
+            <h1 class="mb-1">{{ assignment.title }}</h1>
+            <p class="text-muted mb-0">Submit your work as a PDF before the due date.</p>
+        </div>
+        <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Assignment brief</h4>
+                <div class="small text-muted mb-3"><strong class="text-dark">Due:</strong> {{ assignment.due_at_display() }}</div>
+                {% if assignment.instructions %}
+                <div class="border rounded-4 p-3 mb-3" style="white-space: pre-wrap;">{{ assignment.instructions }}</div>
+                {% endif %}
+                {% if assignment.resource_file %}
+                <a href="{{ url_for('static', filename=assignment.resource_file) }}" target="_blank" class="btn btn-outline-primary btn-sm">Open assignment PDF</a>
+                {% endif %}
+                {% if not assignment.instructions and not assignment.resource_file %}
+                <div class="text-muted">No extra brief was added.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-3">My submission</h4>
+                {% if submission %}
+                <div class="alert alert-success">
+                    Submitted on {{ submission.submitted_at_display() }}.
+                </div>
+                <a href="{{ url_for('static', filename=submission.submission_file) }}" target="_blank" class="btn btn-outline-secondary btn-sm mb-3">Open submitted PDF</a>
+                {% if submission.submission_note %}<div class="small text-muted mb-3">{{ submission.submission_note }}</div>{% endif %}
+                {% endif %}
+                <form method="POST" action="{{ url_for('main.submit_learning_assignment', course_id=course.id, assignment_id=assignment.id) }}" enctype="multipart/form-data">
+                    <div class="mb-3"><input type="file" class="form-control" name="submission_file" accept="application/pdf" required></div>
+                    <div class="mb-3"><textarea class="form-control" name="submission_note" rows="4" placeholder="Optional note to the teacher"></textarea></div>
+                    <button type="submit" class="btn btn-primary w-100">{% if submission %}Resubmit PDF{% else %}Submit PDF{% endif %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

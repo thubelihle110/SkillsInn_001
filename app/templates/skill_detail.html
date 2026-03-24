@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-light border mb-3">{{ skill.display_category() }}</span>
+            <h1 class="mb-1">{{ skill.title }}</h1>
+            <p class="text-muted mb-0">Published by {{ skill.owner.full_name }}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.skills') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to skills
+            </a>
+            {% if skill.user_id == current_user.id %}
+                {% if skill.can_be_edited_by_owner() %}<a href="{{ url_for('main.edit_skill', skill_id=skill.id) }}" class="btn btn-primary">Edit skill</a>{% else %}<button type="button" class="btn btn-outline-secondary" disabled>Learning Hub skill</button>{% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 mb-4">
+            <div class="card-body p-4 p-lg-5">
+                <h3 class="mb-3">Description</h3>
+                <p class="text-muted mb-0">{{ skill.description }}</p>
+            </div>
+        </div>
+
+        {% if skill.verification_status == "Rejected" and skill.user_id == current_user.id and skill.verification_note %}
+            <div class="app-alert alert alert-danger mb-4">
+                <strong>Rejection reason:</strong><br>
+                {{ skill.verification_note }}
+            </div>
+        {% endif %}
+
+        {% if skill.certificate_file and skill.user_id == current_user.id %}
+            <div class="card border-0">
+                <div class="card-body p-4">
+                    <h4 class="mb-2">Supporting document</h4>
+                    <p class="text-muted mb-3">Your uploaded certificate can be reviewed here.</p>
+                    <a href="{{ url_for('static', filename=skill.certificate_file) }}" target="_blank" class="btn btn-outline-primary btn-sm">View uploaded certificate</a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 mb-4">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Skill summary</h4>
+                <div class="small text-muted d-grid gap-3">
+                    <div><strong class="d-block text-dark mb-1">Experience level</strong>{{ skill.experience_level }}</div>
+                    <div><strong class="d-block text-dark mb-1">Availability</strong>{{ skill.availability }}</div>
+                    <div><strong class="d-block text-dark mb-1">Status</strong>{{ skill.status }}</div>
+                    <div>
+                        <strong class="d-block text-dark mb-1">Certification status</strong>
+                        <span class="skill-badge skill-badge-{{ skill.display_badge_tone() }}">{{ skill.display_badge_label() }}</span>
+                    </div>
+                    {% if skill.verified_at %}
+                        <div><strong class="d-block text-dark mb-1">Last reviewed</strong>{{ skill.verified_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if skill.user_id == current_user.id %}
+        <div class="card border-0">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Actions</h4>
+                <div class="d-grid gap-2">
+                    {% if skill.can_be_edited_by_owner() %}<a href="{{ url_for('main.edit_skill', skill_id=skill.id) }}" class="btn btn-primary">Edit skill</a>{% else %}<button type="button" class="btn btn-outline-secondary" disabled>Learning Hub skill</button>{% endif %}
+                    <form method="POST" action="{{ url_for('main.delete_skill', skill_id=skill.id) }}" onsubmit="return confirm('Are you sure you want to delete this skill?');">
+                        <button type="submit" class="btn btn-outline-danger w-100">Delete skill</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% if current_user.is_authenticated and current_user.role == "user" and skill.user_id == current_user.id %}
+<div class="card border-0 mt-4">
+    <div class="card-body">
+        <h5 class="mb-2">Learning Hub teaching status</h5>
+        <p class="text-muted mb-3">Your current teaching eligibility for this skill is based on its level.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if skill.can_apply_to_teach() %}
+                <a href="{{ url_for('main.apply_to_teach', skill_id=skill.id) }}" class="btn btn-success">Apply to Teach</a>
+            {% else %}
+                <button type="button" class="btn btn-outline-secondary" disabled>You cannot apply as a Beginner</button>
+            {% endif %}
+            <a href="{{ url_for('main.my_teaching_applications') }}" class="btn btn-outline-primary">My teaching applications</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

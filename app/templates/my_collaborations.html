@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <span class="section-kicker">Work</span>
+            <h1 class="page-title mb-2">My Collaborations</h1>
+            <p class="page-subtitle mb-0">This is your shared workspace for accepted requests, scheduling, outcomes, and ratings.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.my_applications') }}" class="btn btn-outline-primary rounded-pill px-3">My Applications</a>
+            <a href="{{ url_for('main.my_calendar') }}" class="btn btn-primary rounded-pill px-3">My Calendar</a>
+        </div>
+    </div>
+</section>
+
+<div class="row g-4">
+    {% for collaboration in collaborations %}
+    {% set other_party = collaboration.other_party_for(current_user) %}
+    <div class="col-xl-6">
+        <article class="card border-0 shadow-sm h-100 collaboration-summary-card app-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <span class="badge text-bg-light border mb-2">{{ collaboration.help_request.display_category() }}</span>
+                        <h4 class="mb-1">{{ collaboration.help_request.title }}</h4>
+                        <p class="text-muted mb-0">With {{ other_party.full_name if other_party else 'Unknown User' }}</p>
+                    </div>
+                    <span class="badge {{ collaboration.outcome_status_badge_class() }} rounded-pill collaboration-status-badge">
+                        {{ collaboration.outcome_status_label() }}
+                    </span>
+                </div>
+
+                <div class="row g-3 small mb-3">
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Schedule</div>
+                            <div class="fw-semibold">{{ collaboration.help_request.schedule_display() }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Location</div>
+                            <div class="fw-semibold">{{ collaboration.help_request.full_location() }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Started</div>
+                            <div class="fw-semibold">{{ collaboration.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Request status</div>
+                            <div class="fw-semibold">{{ collaboration.help_request.status }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if collaboration.status == "Completed" %}
+                    {% if collaboration.rating_pending_for(current_user) %}
+                        <div class="alert alert-warning small mb-0">Your rating is still pending for this completed collaboration.</div>
+                    {% else %}
+                        <div class="alert alert-light border small mb-0">Your rating has already been submitted for this collaboration.</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 pt-0 pb-4 px-4 d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('main.collaboration_detail', collaboration_id=collaboration.id) }}" class="btn btn-primary btn-sm rounded-pill px-3">Open Workspace</a>
+                <a href="{{ url_for('main.help_request_detail', request_id=collaboration.help_request.id) }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">View Request</a>
+            </div>
+        </article>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="empty-state-panel text-center py-5 px-4">
+            <div class="empty-state-icon mb-3"><i class="bi bi-people"></i></div>
+            <h3 class="h5 mb-2">No collaborations yet</h3>
+            <p class="text-muted mb-0">Once one of your applications is accepted, the shared collaboration workspace will appear here.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

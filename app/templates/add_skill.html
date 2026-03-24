@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Provider workspace</span>
+            <h1 class="mb-1">Add skill</h1>
+            <p class="text-muted mb-0">Showcase what you can do so requesters can find, trust, and select you faster.</p>
+        </div>
+        <a href="{{ url_for('main.my_skills') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to my skills
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select", id="category") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.custom_category.label(class="form-label") }}
+                            {{ form.custom_category(class="form-control", id="custom_category", placeholder="Only enabled when 'Other' is selected") }}
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control", placeholder="e.g. Laptop Repair, CV Writing, Welding") }}
+                    </div>
+
+                    <div class="mt-4">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="6", placeholder="Describe what you offer, tools you use, and what kind of work you are confident handling.") }}
+                    </div>
+
+                    <div class="row g-4 mt-1">
+                        <div class="col-md-6">
+                            {{ form.experience_level.label(class="form-label") }}
+                            {{ form.experience_level(class="form-select") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.availability.label(class="form-label") }}
+                            {{ form.availability(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="info-strip mt-4 mb-4">
+                        <div class="fw-semibold mb-2">Verification note</div>
+                        <p class="mb-0 text-muted">Uploading a certificate is optional, but it helps build trust. If you upload one, the skill moves to <strong>Awaiting Verification</strong> until admin review.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form.certificate_file.label(class="form-label") }}
+                        {{ form.certificate_file(class="form-control") }}
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('main.my_skills') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

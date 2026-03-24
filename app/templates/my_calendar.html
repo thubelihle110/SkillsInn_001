@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <span class="section-kicker">Planning</span>
+            <h1 class="page-title mb-2">My Calendar</h1>
+            <p class="page-subtitle mb-0">Accepted work appears here so you can spot clashes, confirm timing, and jump into request details quickly.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.my_applications') }}" class="btn btn-outline-primary rounded-pill px-3">My Applications</a>
+            <a href="{{ url_for('main.my_collaborations') }}" class="btn btn-primary rounded-pill px-3">My Collaborations</a>
+        </div>
+    </div>
+</section>
+
+<div class="card border-0 shadow-sm app-card mb-4">
+    <div class="card-body p-3 p-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <a href="{{ url_for('main.my_calendar', month=prev_month, year=prev_year) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">← Previous Month</a>
+            <div class="text-center">
+                <div class="section-kicker mb-1">Schedule overview</div>
+                <h3 class="mb-0">{{ current_month_name }} {{ current_year }}</h3>
+            </div>
+            <a href="{{ url_for('main.my_calendar', month=next_month, year=next_year) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">Next Month →</a>
+        </div>
+
+        <div class="row g-3 mb-4 small">
+            <div class="col-md-3"><div class="app-detail-chip h-100"><span class="badge bg-success me-2">Accepted</span>Accepted request</div></div>
+            <div class="col-md-3"><div class="app-detail-chip h-100"><span class="badge bg-warning text-dark me-2">Conflict</span>Overlapping work on the same day</div></div>
+            <div class="col-md-3"><div class="app-detail-chip h-100"><span class="badge bg-primary me-2">Today</span>Current date</div></div>
+            <div class="col-md-3"><div class="app-detail-chip h-100 text-muted">Click an event block to open its full request information.</div></div>
+        </div>
+
+        <div class="table-responsive calendar-table-wrap">
+            <table class="table table-bordered align-middle mb-0 calendar-table">
+                <thead>
+                    <tr>
+                        {% for day_name in weekday_headers %}
+                            <th class="text-center">{{ day_name }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_weeks %}
+                        <tr>
+                            {% for cell in week %}
+                                {% if cell.is_blank %}
+                                    <td class="calendar-blank-cell"></td>
+                                {% else %}
+                                    <td class="align-top calendar-day-cell {% if cell.is_today %}calendar-day-today{% endif %} {% if cell.has_conflict %}calendar-day-conflict{% endif %}">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <strong>{{ cell.day }}</strong>
+                                            <div class="d-flex gap-1 flex-wrap justify-content-end">
+                                                {% if cell.is_today %}<span class="badge bg-primary">Today</span>{% endif %}
+                                                {% if cell.has_conflict %}<span class="badge bg-warning text-dark">Conflict</span>{% endif %}
+                                            </div>
+                                        </div>
+
+                                        {% if cell.events %}
+                                            {% set color_styles = [
+                                                "background:#fff3cd;color:#664d03;border:1px solid #ffc107;border-left:6px solid #ffc107;",
+                                                "background:#cfe2ff;color:#084298;border:1px solid #0d6efd;border-left:6px solid #0d6efd;",
+                                                "background:#d1e7dd;color:#0f5132;border:1px solid #198754;border-left:6px solid #198754;",
+                                                "background:#f8d7da;color:#842029;border:1px solid #dc3545;border-left:6px solid #dc3545;",
+                                                "background:#e2d9f3;color:#432874;border:1px solid #6f42c1;border-left:6px solid #6f42c1;",
+                                                "background:#cff4fc;color:#055160;border:1px solid #0dcaf0;border-left:6px solid #0dcaf0;",
+                                                "background:#fce5cd;color:#7c4a03;border:1px solid #fd7e14;border-left:6px solid #fd7e14;"
+                                            ] %}
+
+                                            <div class="d-flex flex-column gap-2">
+                                                {% for event in cell.events[:3] %}
+                                                    {% set style = color_styles[loop.index0 % color_styles|length] %}
+                                                    <button type="button" class="btn text-start p-0 border-0 bg-transparent calendar-event-trigger" data-bs-toggle="modal" data-bs-target="#calendarEventModal" data-request-url="{{ url_for('main.help_request_detail', request_id=event.help_request.id) }}" data-title="{{ event.help_request.title }}" data-time="{{ event.start_time.strftime('%H:%M') }} - {{ event.end_time.strftime('%H:%M') }}" data-category="{{ event.help_request.display_category() }}" data-location="{{ event.help_request.full_location() }}" data-schedule="{{ event.help_request.schedule_display() }}" data-urgency="{{ event.help_request.urgency }}" data-status="{{ event.help_request.status }}" data-requester="{{ event.help_request.requester.full_name }}" data-description="{{ event.help_request.description }}">
+                                                        <div class="rounded p-2" style="{{ style }}">
+                                                            <div class="small fw-semibold">{{ event.start_time.strftime('%H:%M') }} - {{ event.end_time.strftime('%H:%M') }}</div>
+                                                            <div class="small">{{ event.help_request.title }}</div>
+                                                            {% if event.has_conflict %}<div class="small fw-semibold mt-1">Schedule clash</div>{% endif %}
+                                                        </div>
+                                                    </button>
+                                                {% endfor %}
+
+                                                {% if cell.events|length > 3 %}
+                                                    <button class="btn btn-link btn-sm text-start p-0" type="button" data-bs-toggle="collapse" data-bs-target="#more-events-{{ current_year }}-{{ current_month }}-{{ cell.day }}" aria-expanded="false">+{{ cell.events|length - 3 }} more</button>
+                                                    <div class="collapse" id="more-events-{{ current_year }}-{{ current_month }}-{{ cell.day }}">
+                                                        <div class="d-flex flex-column gap-2 mt-2">
+                                                            {% for event in cell.events[3:] %}
+                                                                {% set style = color_styles[(loop.index0 + 3) % color_styles|length] %}
+                                                                <button type="button" class="btn text-start p-0 border-0 bg-transparent calendar-event-trigger" data-bs-toggle="modal" data-bs-target="#calendarEventModal" data-request-url="{{ url_for('main.help_request_detail', request_id=event.help_request.id) }}" data-title="{{ event.help_request.title }}" data-time="{{ event.start_time.strftime('%H:%M') }} - {{ event.end_time.strftime('%H:%M') }}" data-category="{{ event.help_request.display_category() }}" data-location="{{ event.help_request.full_location() }}" data-schedule="{{ event.help_request.schedule_display() }}" data-urgency="{{ event.help_request.urgency }}" data-status="{{ event.help_request.status }}" data-requester="{{ event.help_request.requester.full_name }}" data-description="{{ event.help_request.description }}">
+                                                                    <div class="rounded p-2" style="{{ style }}">
+                                                                        <div class="small fw-semibold">{{ event.start_time.strftime('%H:%M') }} - {{ event.end_time.strftime('%H:%M') }}</div>
+                                                                        <div class="small">{{ event.help_request.title }}</div>
+                                                                        {% if event.has_conflict %}<div class="small fw-semibold mt-1">Schedule clash</div>{% endif %}
+                                                                    </div>
+                                                                </button>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <div class="small text-muted">No scheduled work</div>
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% set total_events = namespace(count=0) %}
+        {% for week in calendar_weeks %}
+            {% for cell in week %}
+                {% set total_events.count = total_events.count + (cell.events|length) %}
+            {% endfor %}
+        {% endfor %}
+
+        {% if total_events.count == 0 %}
+            <div class="alert alert-info mt-3 mb-0">You do not have any accepted requests scheduled for this month.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="modal fade" id="calendarEventModal" tabindex="-1" aria-labelledby="calendarEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <div class="section-kicker mb-1">Scheduled request</div>
+                    <h5 class="modal-title" id="calendarEventModalLabel">Scheduled Request</h5>
+                    <div class="small text-muted" id="modalTimeText"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <h4 class="mb-3" id="modalTitleText"></h4>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6"><div class="app-detail-chip h-100"><strong>Requester:</strong> <span id="modalRequesterText"></span><br><strong>Category:</strong> <span id="modalCategoryText"></span><br><strong>Status:</strong> <span id="modalStatusText"></span></div></div>
+                    <div class="col-md-6"><div class="app-detail-chip h-100"><strong>Urgency:</strong> <span id="modalUrgencyText"></span><br><strong>Location:</strong> <span id="modalLocationText"></span></div></div>
+                </div>
+                <div class="app-detail-chip mb-3"><strong>Schedule:</strong><div id="modalScheduleText"></div></div>
+                <div class="app-detail-chip"><strong>Description:</strong><p class="mb-0 mt-1" id="modalDescriptionText"></p></div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a href="#" class="btn btn-primary rounded-pill px-3" id="modalViewRequestBtn">View Full Request</a>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const modalElement = document.getElementById("calendarEventModal");
+    if (!modalElement) return;
+    const modalTitleText = document.getElementById("modalTitleText");
+    const modalTimeText = document.getElementById("modalTimeText");
+    const modalRequesterText = document.getElementById("modalRequesterText");
+    const modalCategoryText = document.getElementById("modalCategoryText");
+    const modalStatusText = document.getElementById("modalStatusText");
+    const modalUrgencyText = document.getElementById("modalUrgencyText");
+    const modalLocationText = document.getElementById("modalLocationText");
+    const modalScheduleText = document.getElementById("modalScheduleText");
+    const modalDescriptionText = document.getElementById("modalDescriptionText");
+    const modalViewRequestBtn = document.getElementById("modalViewRequestBtn");
+
+    modalElement.addEventListener("show.bs.modal", function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+        modalTitleText.textContent = trigger.getAttribute("data-title") || "Scheduled Request";
+        modalTimeText.textContent = trigger.getAttribute("data-time") || "";
+        modalRequesterText.textContent = trigger.getAttribute("data-requester") || "";
+        modalCategoryText.textContent = trigger.getAttribute("data-category") || "";
+        modalStatusText.textContent = trigger.getAttribute("data-status") || "";
+        modalUrgencyText.textContent = trigger.getAttribute("data-urgency") || "";
+        modalLocationText.textContent = trigger.getAttribute("data-location") || "";
+        modalScheduleText.textContent = trigger.getAttribute("data-schedule") || "";
+        modalDescriptionText.textContent = trigger.getAttribute("data-description") || "";
+        modalViewRequestBtn.href = trigger.getAttribute("data-request-url") || "#";
+    });
+});
+</script>
+{% endblock %}

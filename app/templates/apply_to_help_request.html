@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="mb-2">Apply to Help</h2>
+                <p class="text-muted mb-3">Request: {{ help_request.title }}</p>
+
+                {% set requester_avg = help_request.requester.average_requester_rating_received() %}
+                {% set requester_count = help_request.requester.requester_rating_count_received() %}
+                <div class="alert alert-light border">
+                    <div class="small text-muted mb-1">Requester reputation</div>
+                    {% if requester_count %}
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span style="color: #d4af37; font-size: 1.15rem; letter-spacing: 0.08rem;">
+                                {% for i in range(1, 6) %}
+                                    {% if requester_avg >= i %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="fw-semibold">{{ requester_avg }}/5</span>
+                            <span class="text-muted small">{{ requester_count }} rating{{ '' if requester_count == 1 else 's' }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-muted small">This requester has no ratings yet.</div>
+                    {% endif %}
+                </div>
+
+                {% if skill_match_info %}
+                    {% if skill_match_info.skills_match %}
+                        <div class="alert alert-success">
+                            <strong>Your skills match this request.</strong><br>
+                            Matched category: {{ skill_match_info.matched_category_name }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <strong>This request does not match your current skill categories.</strong><br>
+                            No matching skill category found for: {{ skill_match_info.request_category_name }}
+
+                            <div class="mt-3 d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('main.my_skills', next=url_for('main.apply_to_help_request', request_id=help_request.id)) }}" class="btn btn-outline-dark btn-sm">
+                                    Update My Skills
+                                </a>
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="upload-cv-instead-btn">
+                                    Upload CV Instead
+                                </button>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if conflict_info and conflict_info.has_conflict %}
+                    <div class="alert alert-warning">
+                        <strong>Possible schedule conflict detected.</strong><br>
+                        This opportunity appears to overlap with one of your accepted commitments.
+                        {% if conflict_info.conflict_message %}
+                            <div class="mt-2">{{ conflict_info.conflict_message }}</div>
+                        {% endif %}
+                        <div class="mt-2 small text-muted">
+                            You may still apply, but you will not be able to accept overlapping work later.
+                        </div>
+                    </div>
+                {% endif %}
+
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.message.label(class="form-label") }}
+                        {{ form.message(class="form-control", rows="6", placeholder="Explain why you are a good fit for this request.") }}
+                        {% for error in form.message.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.resume_choice.label(class="form-label") }}
+                        {{ form.resume_choice(class="form-select", id="resume_choice") }}
+                        {% for error in form.resume_choice.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.resume_label.label(class="form-label") }}
+                        {{ form.resume_label(class="form-control", placeholder="Example: IT Support CV") }}
+                        {% for error in form.resume_label.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3" id="custom-resume-wrapper">
+                        {{ form.resume_file.label(class="form-label") }}
+                        {{ form.resume_file(class="form-control") }}
+                        <div class="form-text">Upload a PDF CV tailored for this request.</div>
+                        {% for error in form.resume_file.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="alert alert-light border">
+                        <strong>Note:</strong>
+                        The requester will see the exact CV submitted with this application and the submission date.
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <a href="{{ url_for('main.help_request_detail', request_id=help_request.id) }}" class="btn btn-outline-secondary">
+                            Back to Request
+                        </a>
+                        {{ form.submit(class="btn btn-success") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

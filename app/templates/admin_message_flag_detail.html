@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="page-hero__content">
+        <span class="section-eyebrow">Moderation review</span>
+        <h1 class="page-title mb-2">Flag Review</h1>
+        <p class="page-subtitle mb-0">Reported {{ message_flag.created_at.strftime('%d %b %Y, %H:%M') }}</p>
+    </div>
+    <div class="page-hero__actions">
+        <a href="{{ url_for('main.admin_message_flags') }}" class="btn btn-outline-secondary rounded-pill px-4">Back to Flag Queue</a>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="app-card h-100">
+            <div class="app-card__header">
+                <div>
+                    <h2 class="app-card__title">Report Summary</h2>
+                    <p class="app-card__subtitle">Core information needed for moderation review.</p>
+                </div>
+            </div>
+            <div class="app-card__body">
+                <div class="detail-list">
+                    <div class="detail-list__item"><span class="detail-list__label">Reporter</span><span class="detail-list__value">{{ message_flag.reporter.full_name }}</span></div>
+                    <div class="detail-list__item"><span class="detail-list__label">Reported user</span><span class="detail-list__value">{{ message_flag.reported_user.full_name if message_flag.reported_user else 'Unknown User' }}</span></div>
+                    <div class="detail-list__item"><span class="detail-list__label">Reason</span><span class="detail-list__value">{{ message_flag.reason_label() }}</span></div>
+                    <div class="detail-list__item"><span class="detail-list__label">Status</span><span class="detail-list__value"><span class="badge bg-{{ message_flag.status_badge_class() }}">{{ message_flag.review_summary() }}</span></span></div>
+                    <div class="detail-list__item"><span class="detail-list__label">Collaboration</span><span class="detail-list__value">{{ message_flag.collaboration.help_request.title }}</span></div>
+                </div>
+
+                {% if message_flag.details %}
+                    <div class="detail-note mt-4">
+                        <div class="detail-note__title">Reporter details</div>
+                        <div class="text-muted">{{ message_flag.details }}</div>
+                    </div>
+                {% endif %}
+
+                {% if message_flag.status == 'Pending' %}
+                    <form method="POST" action="{{ url_for('main.review_message_flag', flag_id=message_flag.id) }}" class="mt-4">
+                        <div class="app-note mb-3">
+                            <div class="fw-semibold mb-1">Moderation review quiz</div>
+                            <p class="text-muted small mb-0">Answer the questions below. The system computes the outcome automatically.</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="is_report_valid" class="form-label fw-semibold">Is this report valid?</label>
+                            <select class="form-select" id="is_report_valid" name="is_report_valid" required>
+                                <option value="">Select an answer</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+
+                        <div id="moderationFollowupQuestions">
+                            <div class="mb-3">
+                                <label for="violates_guidelines" class="form-label fw-semibold">Does the message violate community guidelines?</label>
+                                <select class="form-select moderation-followup-input" id="violates_guidelines" name="violates_guidelines">
+                                    <option value="">Select an answer</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="severity_level" class="form-label fw-semibold">How severe is the message?</label>
+                                <select class="form-select moderation-followup-input" id="severity_level" name="severity_level">
+                                    <option value="">Select severity</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Moderate">Moderate</option>
+                                    <option value="Severe">Severe</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="is_targeted_abuse" class="form-label fw-semibold">Is this targeted harassment, abuse, hate, or threatening conduct?</label>
+                                <select class="form-select moderation-followup-input" id="is_targeted_abuse" name="is_targeted_abuse">
+                                    <option value="">Select an answer</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="is_repeat_behavior" class="form-label fw-semibold">Does this appear to be repeated behaviour by the same user?</label>
+                                <select class="form-select moderation-followup-input" id="is_repeat_behavior" name="is_repeat_behavior">
+                                    <option value="">Select an answer</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="creates_safety_risk" class="form-label fw-semibold">Does this create a trust or safety risk on the platform?</label>
+                                <select class="form-select moderation-followup-input" id="creates_safety_risk" name="creates_safety_risk">
+                                    <option value="">Select an answer</option>
+                                    <option value="Yes">Yes</option>
+                                    <option value="No">No</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="invalidReportNotice" class="alert alert-info d-none" role="alert">
+                            This report has been marked invalid. The remaining review questions are not required, and the outcome will be recorded as No Violation.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="admin_notes" class="form-label fw-semibold">Admin notes <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea class="form-control" id="admin_notes" name="admin_notes" rows="5" maxlength="2000" placeholder="Add internal notes for this review."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-danger rounded-pill w-100">Save Review</button>
+                    </form>
+                {% else %}
+                    <div class="detail-note mt-4">
+                        <div class="detail-note__title">Final review</div>
+                        <div class="text-muted mb-2">{{ message_flag.review_summary() }}</div>
+                        {% if message_flag.moderation_review %}
+                            <div class="small mb-2"><strong>System outcome:</strong> {{ message_flag.moderation_review.computed_outcome }}</div>
+                            <ul class="small text-muted ps-3 mb-2">
+                                <li>Valid report: {{ 'Yes' if message_flag.moderation_review.is_report_valid else 'No' }}</li>
+                                <li>Guideline violation: {{ 'Yes' if message_flag.moderation_review.violates_guidelines else 'No' }}</li>
+                                <li>Severity: {{ message_flag.moderation_review.severity_level }}</li>
+                                <li>Targeted abuse: {{ 'Yes' if message_flag.moderation_review.is_targeted_abuse else 'No' }}</li>
+                                <li>Repeat behaviour: {{ 'Yes' if message_flag.moderation_review.is_repeat_behavior else 'No' }}</li>
+                                <li>Safety risk: {{ 'Yes' if message_flag.moderation_review.creates_safety_risk else 'No' }}</li>
+                            </ul>
+                        {% endif %}
+                        {% if message_flag.reviewed_by %}
+                            <div class="small text-muted mb-2">Reviewed by {{ message_flag.reviewed_by.full_name }} on {{ message_flag.reviewed_at.strftime('%d %b %Y, %H:%M') if message_flag.reviewed_at else '' }}</div>
+                        {% endif %}
+                        {% if message_flag.generated_restrictions %}
+                            {% set latest_restriction = message_flag.generated_restrictions[-1] %}
+                            <div class="small mb-2"><strong>Restriction:</strong> {{ latest_restriction.outcome_label }}{% if latest_restriction.ends_at %} until {{ latest_restriction.ends_at.strftime('%d %b %Y, %H:%M') }}{% endif %}</div>
+                        {% endif %}
+                        {% if message_flag.admin_notes %}
+                            <div>{{ message_flag.admin_notes }}</div>
+                        {% else %}
+                            <div class="text-muted">No admin notes recorded.</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="app-card">
+            <div class="app-card__header">
+                <div>
+                    <h2 class="app-card__title">Message Context</h2>
+                    <p class="app-card__subtitle">Review the surrounding conversation before saving a decision.</p>
+                </div>
+            </div>
+            <div class="app-card__body">
+                <div class="admin-context-thread">
+                    {% for context_message in context_messages %}
+                        <div class="admin-context-message {% if context_message.id == message_flag.message_id %}admin-context-message-target{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                <div class="fw-semibold">{{ context_message.display_sender_name() }}</div>
+                                <div class="small text-muted">{{ context_message.created_at.strftime('%d %b %Y, %H:%M') }}</div>
+                            </div>
+                            <div class="mt-2">{{ context_message.body }}</div>
+                            {% if context_message.id == message_flag.message_id %}
+                                <div class="small text-danger fw-semibold mt-2">Flagged message</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const validSelect = document.getElementById("is_report_valid");
+    const followupSection = document.getElementById("moderationFollowupQuestions");
+    const invalidNotice = document.getElementById("invalidReportNotice");
+    if (!validSelect || !followupSection || !invalidNotice) return;
+
+    const followupInputs = followupSection.querySelectorAll("select, input, textarea");
+
+    function toggleModerationFollowups() {
+        const isInvalid = validSelect.value === "No";
+        followupSection.classList.toggle("d-none", isInvalid);
+        invalidNotice.classList.toggle("d-none", !isInvalid);
+
+        followupInputs.forEach((input) => {
+            if (isInvalid) {
+                input.required = false;
+                if (input.tagName === "SELECT") {
+                    input.value = "";
+                } else if (input.type === "checkbox" || input.type === "radio") {
+                    input.checked = false;
+                } else {
+                    input.value = "";
+                }
+                input.disabled = true;
+            } else {
+                input.disabled = false;
+            }
+        });
+    }
+
+    validSelect.addEventListener("change", toggleModerationFollowups);
+    toggleModerationFollowups();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Applicant review</span>
+            <h1 class="mb-1">Applicants for “{{ help_request.title }}”</h1>
+            <p class="text-muted mb-0">Compare experience, ratings, and submitted CVs before selecting the right candidate.</p>
+        </div>
+        <a href="{{ url_for('main.help_request_detail', request_id=help_request.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to request
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for application in applications %}
+    {% set provider_avg = application.applicant.average_provider_rating_received() %}
+    {% set provider_count = application.applicant.provider_rating_count_received() %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 border-0">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <h4 class="mb-1">{{ application.applicant.full_name }}</h4>
+                        <p class="text-muted mb-0">{{ application.applicant.email }}</p>
+                    </div>
+                    <span class="badge {% if application.status == 'Applied' %}text-bg-primary{% elif application.status == 'Selected' %}text-bg-warning{% elif application.status == 'Accepted' %}text-bg-success{% else %}text-bg-danger{% endif %}">{{ application.status }}</span>
+                </div>
+
+                <div class="small mb-3">
+                    {% if provider_count %}
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span style="color: #d4af37; font-size: 1.05rem; letter-spacing: 0.08rem;">
+                                {% for i in range(1, 6) %}
+                                    {% if provider_avg >= i %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="fw-semibold">{{ provider_avg }}/5</span>
+                            <span class="text-muted">Provider · {{ provider_count }} rating{{ '' if provider_count == 1 else 's' }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">No provider ratings yet.</div>
+                    {% endif %}
+                </div>
+
+                <div class="info-strip mb-3">
+                    <div class="fw-semibold mb-2">Application message</div>
+                    <p class="mb-0 text-muted">{{ application.message }}</p>
+                </div>
+
+                <div class="small text-muted d-grid gap-2 mb-3">
+                    <div><strong class="text-dark">Applied at:</strong> {{ application.applied_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    <div><strong class="text-dark">Experience level:</strong> {{ application.applicant.experience_level or 'Not provided' }}</div>
+                </div>
+
+                {% if application.applicant.skills %}
+                    <div class="mb-3">
+                        <div class="fw-semibold small mb-2">Skills</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for skill in application.applicant.skills %}
+                                <span class="badge text-bg-primary">{{ skill.title }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-3">No skills listed.</p>
+                {% endif %}
+
+                {% if application.decline_reason %}
+                    <div class="app-alert alert alert-warning mb-3">
+                        <strong>Decline reason:</strong> {{ application.decline_reason }}
+                    </div>
+                {% endif %}
+
+                {% if application.responded_at %}
+                    <div class="info-strip mb-3 small">
+                        <strong>Responded on:</strong> {{ application.responded_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if application.decline_reason == "Other" and application.decline_reason_details %}
+                            <div class="mt-2"><strong>More details:</strong> {{ application.decline_reason_details }}</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="mt-auto d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('main.applicant_profile', request_id=help_request.id, user_id=application.applicant.id) }}" class="btn btn-outline-primary btn-sm">View applicant profile</a>
+
+                    {% if application.status == "Applied" and help_request.status not in ["In Progress", "Completed"] %}
+                        <form method="POST" action="{{ url_for('main.select_applicant', application_id=application.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm">Select applicant</button>
+                        </form>
+                    {% elif application.status == "Selected" %}
+                        <span class="badge text-bg-warning align-self-center">Awaiting candidate response</span>
+                    {% elif application.status == "Accepted" %}
+                        <span class="badge text-bg-success align-self-center">Accepted</span>
+                        {% if collaboration_map.get(application.id) %}
+                            <a href="{{ url_for('main.collaboration_detail', collaboration_id=collaboration_map[application.id].id) }}" class="btn btn-primary btn-sm">Open collaboration</a>
+                        {% endif %}
+                    {% elif application.status == "Declined" %}
+                        <span class="badge text-bg-danger align-self-center">Declined</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="empty-state-card">
+            <i class="bi bi-people"></i>
+            <h4 class="mt-3 mb-2">No applications received yet</h4>
+            <p class="text-muted mb-0">Once providers apply to this request, they will appear here for review.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

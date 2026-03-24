@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm auth-card auth-card-verify">
+            <div class="card-body p-4 p-lg-5">
+                <div class="auth-status-icon mb-3">📧</div>
+                <h2 class="text-center mb-2">Check your email</h2>
+                <p class="text-center text-muted mb-4">
+                    {% if email %}
+                        We sent a verification link to <strong>{{ email }}</strong>. Open the email and click the link before logging in.
+                    {% else %}
+                        Enter the email you used to register and we will send a fresh verification link.
+                    {% endif %}
+                </p>
+
+                {% if user and user.is_email_verified %}
+                <div class="alert alert-success border-0 rounded-4">
+                    This email is already verified. You can log in now.
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('main.login') }}" class="btn btn-dark">Go to login</a>
+                </div>
+                {% else %}
+                <div class="auth-info-panel mb-4">
+                    <div class="small text-muted">Did not receive the email?</div>
+                    <div class="fw-semibold">Check spam or resend a new verification link below.</div>
+                </div>
+
+                <form method="POST" action="{{ url_for('main.resend_verification') }}" class="d-grid gap-3">
+                    <div>
+                        <label for="verification-email" class="form-label">Email address</label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="verification-email"
+                            name="email"
+                            value="{{ email or '' }}"
+                            placeholder="Enter your registration email"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Resend verification email</button>
+                    <a href="{{ url_for('main.login') }}" class="btn btn-outline-dark">Back to login</a>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

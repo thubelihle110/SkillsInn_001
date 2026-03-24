@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm auth-card auth-card-register">
+            <div class="card-body p-4">
+                <h2 class="mb-2 text-center">Register</h2>
+                <p class="text-center text-muted mb-4">Create your account, then verify your email to unlock SkillsInn.</p>
+
+                <div class="d-grid gap-2 mb-3">
+                    <a href="{{ url_for('main.auth_google') }}" class="btn btn-outline-dark">Continue with Google</a>
+                    <a href="{{ url_for('main.auth_facebook') }}" class="btn btn-outline-primary">Continue with Facebook</a>
+                </div>
+
+                <div class="text-center text-muted small my-3">or continue with email</div>
+
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.full_name.label(class="form-label") }}
+                        {{ form.full_name(class="form-control") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.email.label(class="form-label") }}
+                        {{ form.email(class="form-control") }}
+                        <div class="form-text">We will send a verification link to this email address.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.phone.label(class="form-label") }}
+                        {{ form.phone(class="form-control") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.confirm_password.label(class="form-label") }}
+                        {{ form.confirm_password(class="form-control") }}
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+
+                <p class="mt-3 text-center">
+                    Already have an account?
+                    <a href="{{ url_for('main.login') }}">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

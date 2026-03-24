@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4 learning-hero-card">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Chapter quiz</span>
+            <h1 class="mb-1">{{ chapter.title }}</h1>
+            <p class="text-muted mb-0">Score at least {{ chapter_quiz_pass_mark }}% to complete this chapter and unlock the next one.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.learning_chapter_detail', course_id=course.id, chapter_id=chapter.id) }}" class="btn btn-outline-secondary">Back to chapter</a>
+            <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+        </div>
+    </div>
+</div>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        {% if progress.quiz_score is not none %}
+        <div class="alert {% if progress.quiz_passed %}alert-success{% else %}alert-warning{% endif %}">
+            Latest score: {{ progress.quiz_score }}%{% if progress.quiz_passed %} · Passed{% else %} · Retry allowed{% endif %}
+        </div>
+        {% endif %}
+        <form method="POST" action="{{ url_for('main.submit_learning_chapter_quiz', course_id=course.id, chapter_id=chapter.id) }}">
+            {% for question in chapter.quiz_questions %}
+            <div class="border rounded-4 p-3 mb-3 learning-preview-card">
+                <div class="fw-semibold mb-2">{{ loop.index }}. {{ question.question_text }}</div>
+                {% for option_key, option_value in question.options() %}
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="question_{{ question.id }}" id="question_{{ question.id }}_{{ option_key }}" value="{{ option_key }}">
+                    <label class="form-check-label" for="question_{{ question.id }}_{{ option_key }}">{{ option_key }}. {{ option_value }}</label>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-primary">Submit quiz</button>
+                <a href="{{ url_for('main.learning_chapter_detail', course_id=course.id, chapter_id=chapter.id) }}" class="btn btn-outline-secondary">Back to chapter</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

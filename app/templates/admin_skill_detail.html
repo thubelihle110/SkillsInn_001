@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="page-hero__content">
+        <span class="section-eyebrow">Verification review</span>
+        <h1 class="page-title mb-2">Review Skill Certification</h1>
+        <p class="page-subtitle mb-0">The certificate must be reviewed first before you can approve or reject this verification.</p>
+    </div>
+    <div class="page-hero__actions">
+        <a href="{{ url_for('main.admin_verifications') }}" class="btn btn-outline-secondary rounded-pill px-4">Back to Verifications</a>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="app-card h-100">
+            <div class="app-card__body">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                    <div>
+                        <span class="badge text-bg-secondary mb-2">{{ skill.display_category() }}</span>
+                        <h2 class="mb-1">{{ skill.title }}</h2>
+                        <p class="text-muted mb-0">Posted by {{ skill.owner.full_name }} ({{ skill.owner.email }})</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        {% if skill.verification_status == "Verified" %}
+                            <span class="badge text-bg-success">Verified</span>
+                        {% elif skill.verification_status == "Awaiting Verification" %}
+                            <span class="badge text-bg-warning">Awaiting Verification</span>
+                        {% elif skill.verification_status == "Rejected" %}
+                            <span class="badge text-bg-danger">Rejected</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">{{ skill.verification_status }}</span>
+                        {% endif %}
+
+                        {% if skill.certificate_viewed_by_admin %}
+                            <span class="badge verification-view-badge verification-view-badge--viewed">Certificate viewed</span>
+                        {% else %}
+                            <span class="badge verification-view-badge verification-view-badge--locked">View required</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="admin-progress-strip mb-4">
+                    <div class="admin-progress-step is-complete">
+                        <span class="admin-progress-step__dot"></span>
+                        <span>Uploaded</span>
+                    </div>
+                    <div class="admin-progress-step {% if skill.certificate_viewed_by_admin %}is-complete{% else %}is-current{% endif %}">
+                        <span class="admin-progress-step__dot"></span>
+                        <span>Viewed by admin</span>
+                    </div>
+                    <div class="admin-progress-step {% if skill.verification_status in ['Verified', 'Rejected'] %}is-complete{% endif %}">
+                        <span class="admin-progress-step__dot"></span>
+                        <span>Decision recorded</span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="detail-panel h-100">
+                            <div class="detail-panel__label">Experience level</div>
+                            <div class="detail-panel__value">{{ skill.experience_level }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-panel h-100">
+                            <div class="detail-panel__label">Availability</div>
+                            <div class="detail-panel__value">{{ skill.availability }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-panel h-100">
+                            <div class="detail-panel__label">Submitted</div>
+                            <div class="detail-panel__value">{{ skill.created_at_display() or skill.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-panel h-100">
+                            <div class="detail-panel__label">Certificate viewed</div>
+                            <div class="detail-panel__value">
+                                {% if skill.certificate_viewed_at %}
+                                    {{ skill.certificate_viewed_at_display() }}
+                                {% else %}
+                                    Not viewed yet
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-section mb-4">
+                    <h3 class="content-section__title">Description</h3>
+                    <p class="mb-0">{{ skill.description }}</p>
+                </div>
+
+                {% if skill.verification_note %}
+                    <div class="alert alert-secondary mb-0">
+                        <strong>Latest verification note:</strong><br>
+                        {{ skill.verification_note }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="stack-card verification-review-stack">
+            <div class="app-card mb-4 verification-review-card">
+                <div class="app-card__header">
+                    <h2 class="app-card__title">Certificate review gate</h2>
+                    <p class="app-card__subtitle">A decision stays locked until the uploaded certificate has been opened in the admin viewer.</p>
+                </div>
+                <div class="app-card__body">
+                    {% if skill.certificate_file %}
+                        <div class="verification-gate-card {% if skill.certificate_viewed_by_admin %}is-unlocked{% else %}is-locked{% endif %}">
+                            <div class="verification-gate-card__icon">
+                                <i class="bi {% if skill.certificate_viewed_by_admin %}bi-shield-check{% else %}bi-lock{% endif %}"></i>
+                            </div>
+                            <div>
+                                <div class="verification-gate-card__title">
+                                    {% if skill.certificate_viewed_by_admin %}
+                                        Certificate already reviewed
+                                    {% else %}
+                                        Review required before decision
+                                    {% endif %}
+                                </div>
+                                <p class="verification-gate-card__text mb-0">
+                                    {% if skill.certificate_viewed_by_admin %}
+                                        This certificate was opened and logged. You can now continue with approval or rejection.
+                                    {% else %}
+                                        Open the certificate viewer to unlock the decision controls for this skill.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            <a
+                                href="{{ url_for('main.view_skill_certificate', skill_id=skill.id) }}"
+                                class="btn {% if skill.certificate_viewed_by_admin %}btn-outline-primary{% else %}btn-primary{% endif %} rounded-pill w-100 admin-certificate-view-btn"
+                                data-open-label="{{ 'Re-open Certificate Viewer' if skill.certificate_viewed_by_admin else 'Open Certificate Viewer' }}"
+                            >
+                                <i class="bi bi-file-earmark-check me-2"></i>
+                                {{ 'Re-open Certificate Viewer' if skill.certificate_viewed_by_admin else 'Open Certificate Viewer' }}
+                            </a>
+                            {% if certificate_url %}
+                                <a href="{{ certificate_url }}" target="_blank" class="btn btn-outline-secondary rounded-pill w-100">
+                                    <i class="bi bi-box-arrow-up-right me-2"></i>Open file directly in new tab
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">No certificate file uploaded for this skill.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if skill.verification_status != "Verified" and skill.certificate_file %}
+            <div class="app-card mb-4 verification-action-card {% if not skill.certificate_viewed_by_admin %}verification-action-card--locked{% endif %}">
+                <div class="app-card__header">
+                    <h2 class="app-card__title">Approve certification</h2>
+                    <p class="app-card__subtitle">Only available after the certificate viewer has been opened.</p>
+                </div>
+                <div class="app-card__body">
+                    {% if not skill.certificate_viewed_by_admin %}
+                        <div class="alert alert-warning verification-inline-alert">
+                            View the uploaded certificate first to unlock approval.
+                        </div>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('main.approve_skill_verification', skill_id=skill.id) }}">
+                        <button type="submit" class="btn btn-success rounded-pill w-100 admin-decision-btn" {% if not skill.certificate_viewed_by_admin %}disabled{% endif %}>
+                            Approve Certification
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="app-card border-danger-subtle verification-action-card {% if not skill.certificate_viewed_by_admin %}verification-action-card--locked{% endif %}">
+                <div class="app-card__header">
+                    <h2 class="app-card__title text-danger">Reject certification</h2>
+                    <p class="app-card__subtitle">Record the reason clearly for the skill owner.</p>
+                </div>
+                <div class="app-card__body">
+                    {% if not skill.certificate_viewed_by_admin %}
+                        <div class="alert alert-warning verification-inline-alert">
+                            Open the certificate viewer before recording a rejection.
+                        </div>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('main.reject_skill_verification', skill_id=skill.id) }}">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.verification_note.label(class="form-label fw-semibold") }}
+                            {{ form.verification_note(class="form-control", rows="5", placeholder="Enter reason for rejection", disabled=not skill.certificate_viewed_by_admin) }}
+                        </div>
+                        <button type="submit" class="btn btn-danger rounded-pill w-100 admin-decision-btn" {% if not skill.certificate_viewed_by_admin %}disabled{% endif %}>
+                            Reject Certification
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

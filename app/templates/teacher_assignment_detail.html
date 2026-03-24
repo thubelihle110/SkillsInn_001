@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Assignment submissions</span>
+            <h1 class="mb-1">{{ assignment.title }}</h1>
+            <p class="text-muted mb-0">Due {{ assignment.due_at_display() }}</p>
+        </div>
+        <a href="{{ url_for('main.teacher_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+    </div>
+</div>
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        {% if assignment.instructions %}
+        <div class="border rounded-4 p-3 mb-3" style="white-space: pre-wrap;">{{ assignment.instructions }}</div>
+        {% endif %}
+        {% if assignment.resource_file %}
+        <a href="{{ url_for('static', filename=assignment.resource_file) }}" target="_blank" class="btn btn-outline-primary btn-sm mb-4">Open assignment PDF</a>
+        {% endif %}
+        {% if submissions %}
+        <div class="list-group list-group-flush">
+            {% for submission in submissions %}
+            <div class="list-group-item px-0 py-3 border-bottom">
+                <div class="d-flex justify-content-between gap-3 flex-wrap">
+                    <div>
+                        <h6 class="mb-1">{{ submission.enrollment.learner.full_name }}</h6>
+                        <div class="small text-muted">Submitted {{ submission.submitted_at_display() }}</div>
+                        {% if submission.submission_note %}<div class="small text-muted mt-1">{{ submission.submission_note }}</div>{% endif %}
+                    </div>
+                    <div>
+                        <a href="{{ url_for('static', filename=submission.submission_file) }}" target="_blank" class="btn btn-outline-secondary btn-sm">Open PDF</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-muted">No learner submissions yet.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

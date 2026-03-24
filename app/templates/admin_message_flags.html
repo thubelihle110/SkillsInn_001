@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="page-hero__content">
+        <span class="section-eyebrow">Trust & safety</span>
+        <h1 class="page-title mb-2">Flagged Messages</h1>
+        <p class="page-subtitle mb-0">Review reported collaboration messages, validate reports, and process moderation outcomes.</p>
+    </div>
+    <div class="page-hero__actions">
+        <a href="{{ url_for('main.admin_dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4">Back to Dashboard</a>
+    </div>
+</section>
+
+<div class="toolbar-card mb-4">
+    <div class="toolbar-card__row">
+        {% for option in ['Pending', 'Reviewed', 'Dismissed', 'All'] %}
+            <a href="{{ url_for('main.admin_message_flags', status=option) }}"
+               class="btn rounded-pill px-3 {% if status_filter == option %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                {{ option }}
+            </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="app-card">
+    <div class="app-card__body">
+        {% if flags %}
+            <div class="table-responsive">
+                <table class="table app-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Reported on</th>
+                            <th>Reporter</th>
+                            <th>Reported user</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for flag in flags %}
+                            <tr>
+                                <td>{{ flag.created_at.strftime('%d %b %Y, %H:%M') }}</td>
+                                <td>{{ flag.reporter.full_name }}</td>
+                                <td>{{ flag.reported_user.full_name if flag.reported_user else 'Unknown User' }}</td>
+                                <td>{{ flag.reason_label() }}</td>
+                                <td><span class="badge bg-{{ flag.status_badge_class() }}">{{ flag.review_summary() }}</span></td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('main.admin_message_flag_detail', flag_id=flag.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Open Review</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state empty-state--compact">
+                <div class="empty-state__title">No flagged messages found</div>
+                <p class="empty-state__text mb-0">There are no reports for the selected filter.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

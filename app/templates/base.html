@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillsInn</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="app-body">
+    {% set is_admin_layout = current_user.is_authenticated and current_user.role == "admin" and not current_user.must_change_credentials %}
+    {% set current_endpoint = request.endpoint or '' %}
+{% if current_user.is_authenticated and current_user.role == 'user' %}
+    {% set nav_workspace = namespace(active=0, pending=0) %}
+    {% for collaboration in current_user.requested_collaborations %}
+        {% if collaboration.status == 'Active' %}
+            {% set nav_workspace.active = nav_workspace.active + 1 %}
+        {% elif collaboration.status in ['PendingCompletionConfirmation', 'PendingCancellation'] and collaboration.user_can_access(current_user) %}
+            {% set nav_workspace.pending = nav_workspace.pending + 1 %}
+        {% endif %}
+    {% endfor %}
+    {% for collaboration in current_user.provided_collaborations %}
+        {% if collaboration.status == 'Active' %}
+            {% set nav_workspace.active = nav_workspace.active + 1 %}
+        {% elif collaboration.status in ['PendingCompletionConfirmation', 'PendingCancellation'] and collaboration.user_can_access(current_user) %}
+            {% set nav_workspace.pending = nav_workspace.pending + 1 %}
+        {% endif %}
+    {% endfor %}
+    {% set nav_calendar_count = current_user.applications|selectattr('status', 'equalto', 'Accepted')|list|length %}
+{% endif %}
+
+    {% macro flash_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-stack">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'warning' if category == 'message' else category }} alert-dismissible fade show shadow-sm app-alert" role="alert" data-auto-dismiss="true">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-info-circle-fill alert-icon"></i>
+                                <div class="flex-grow-1">{{ message }}</div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    {% endmacro %}
+
+    {% if is_admin_layout %}
+        <div class="admin-shell">
+            <aside class="admin-sidebar shadow-sm">
+                <div class="admin-brand-wrap">
+                    <a class="admin-brand" href="{{ url_for('main.admin_dashboard') }}">
+                        <span class="brand-mark"><i class="bi bi-shield-check"></i></span>
+                        <span>
+                            <small class="brand-kicker">SkillsInn</small>
+                            <strong>Admin Console</strong>
+                        </span>
+                    </a>
+                </div>
+
+                <nav class="admin-nav">
+                    <a class="admin-nav-link {% if current_endpoint == 'main.admin_dashboard' %}active{% endif %}" href="{{ url_for('main.admin_dashboard') }}">
+                        <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+                    </a>
+                    <a class="admin-nav-link {% if current_endpoint == 'main.admin_verifications' %}active{% endif %}" href="{{ url_for('main.admin_verifications') }}">
+                        <i class="bi bi-patch-check"></i><span>Verifications</span>
+                    </a>
+                    <a class="admin-nav-link {% if current_endpoint in ['main.admin_message_flags', 'main.admin_message_flag_detail'] %}active{% endif %}" href="{{ url_for('main.admin_message_flags') }}">
+                        <i class="bi bi-flag"></i><span>Flagged Messages</span>
+                    </a>
+                    <a class="admin-nav-link {% if current_endpoint in ['main.admin_teach_applications', 'main.admin_learning_courses'] %}active{% endif %}" href="{{ url_for('main.admin_teach_applications') }}">
+                        <i class="bi bi-mortarboard"></i><span>Learning Hub</span>
+                    </a>
+                    <a class="admin-nav-link {% if current_endpoint == 'main.notifications' %}active{% endif %}" href="{{ url_for('main.notifications') }}">
+                        <i class="bi bi-bell"></i><span>Notifications</span>
+                        {% if unread_notification_count > 0 %}
+                            <span class="nav-pill">{{ unread_notification_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a class="admin-nav-link {% if current_endpoint == 'main.admin_setup' %}active{% endif %}" href="{{ url_for('main.admin_setup') }}">
+                        <i class="bi bi-sliders"></i><span>Setup</span>
+                    </a>
+                </nav>
+
+                <div class="admin-sidebar-footer">
+                    <a class="btn btn-outline-light w-100 rounded-pill" href="{{ url_for('main.logout') }}">
+                        <i class="bi bi-box-arrow-right me-2"></i>Logout
+                    </a>
+                </div>
+            </aside>
+
+            <div class="admin-main">
+                <header class="topbar topbar-admin shadow-sm">
+                    <div class="topbar-left">
+                        <div>
+                            <small class="topbar-kicker">Administration</small>
+                            <div class="topbar-title">Platform management</div>
+                        </div>
+                    </div>
+                    <div class="topbar-actions">
+                        <a class="topbar-icon-link" href="{{ url_for('main.notifications') }}" aria-label="Notifications">
+                            <i class="bi bi-bell"></i>
+                            {% if unread_notification_count > 0 %}
+                                <span class="topbar-badge">{{ unread_notification_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </header>
+    {% else %}
+        <header class="site-header shadow-sm sticky-top">
+            <nav class="navbar navbar-expand-xl app-navbar">
+                <div class="container-fluid app-container-wide">
+                    <a class="navbar-brand app-brand" href="{{ url_for('main.home') }}">
+                        <span class="brand-mark"><i class="bi bi-briefcase"></i></span>
+                        <span>
+                            <small class="brand-kicker">Community skills exchange</small>
+                            <strong>SkillsInn</strong>
+                        </span>
+                    </a>
+
+                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+
+                    <div class="collapse navbar-collapse" id="mainNavbar">
+                        <ul class="navbar-nav me-auto mb-3 mb-xl-0 app-primary-nav">
+                            {% if current_user.is_authenticated and current_user.role == "user" %}
+                                <li class="nav-item"><a class="nav-link {% if current_endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if current_endpoint in ['main.my_collaborations', 'main.collaboration_detail'] %}active{% endif %}" href="{{ url_for('main.my_collaborations') }}">
+                                        My Workspace
+                                        {% if nav_workspace.pending > 0 %}<span class="nav-pill ms-2">{{ nav_workspace.pending }}</span>{% endif %}
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {% if current_endpoint == 'main.my_calendar' %}active{% endif %}" href="{{ url_for('main.my_calendar') }}">
+                                        My Calendar
+                                        {% if nav_calendar_count > 0 %}<span class="nav-pill ms-2">{{ nav_calendar_count }}</span>{% endif %}
+                                    </a>
+                                </li>
+                                <li class="nav-item"><a class="nav-link {% if current_endpoint in ['main.help_requests', 'main.help_request_detail'] %}active{% endif %}" href="{{ url_for('main.help_requests') }}">Browse Requests</a></li>
+                                <li class="nav-item"><a class="nav-link {% if current_endpoint in ['main.skills', 'main.skill_detail'] %}active{% endif %}" href="{{ url_for('main.skills') }}">Browse Skills</a></li>
+                                <li class="nav-item"><a class="nav-link {% if current_endpoint in ['main.learning_hub', 'main.my_learning', 'main.learning_course_detail', 'main.learning_chapter_detail', 'main.learning_chapter_quiz', 'main.learning_final_exam', 'main.teacher_dashboard', 'main.teacher_course_detail', 'main.create_course', 'main.my_teaching_applications'] %}active{% endif %}" href="{{ url_for('main.learning_hub') }}">Learning Hub</a></li>
+                            {% endif %}
+                        </ul>
+
+                        <div class="d-flex align-items-center gap-2 ms-auto app-header-actions">
+                            {% if current_user.is_authenticated %}
+                                <a class="topbar-icon-link" href="{{ url_for('main.notifications') }}" aria-label="Notifications">
+                                    <i class="bi bi-bell"></i>
+                                    {% if unread_notification_count > 0 %}
+                                        <span class="topbar-badge">{{ unread_notification_count }}</span>
+                                    {% endif %}
+                                </a>
+                                <a class="btn btn-outline-secondary rounded-pill px-3" href="{{ url_for('main.logout') }}">Logout</a>
+                            {% else %}
+                                <a class="btn btn-link text-decoration-none text-secondary" href="{{ url_for('main.login') }}">Login</a>
+                                <a class="btn btn-primary rounded-pill px-3" href="{{ url_for('main.register') }}">Get started</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    {% endif %}
+
+    <main class="app-main {% if is_admin_layout %}admin-content{% endif %}">
+        <div class="{% if is_admin_layout %}page-shell{% else %}app-container-wide py-4 py-lg-5{% endif %}">
+            {{ flash_messages() }}
+            {% block page_content %}{% endblock %}
+        </div>
+    </main>
+
+    {% if is_admin_layout %}
+            </div>
+        </div>
+    {% endif %}
+
+
+    <script>
+        window.skillsInnAuthConfig = {
+            isAuthenticated: {{ 'true' if current_user.is_authenticated else 'false' }},
+            logoutUrl: {{ url_for('main.logout')|tojson }}
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

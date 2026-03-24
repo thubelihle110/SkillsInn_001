@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="page-header-card mb-4">
+            <span class="badge text-bg-success-subtle border border-success-subtle mb-3">Learning Hub</span>
+            <h1 class="mb-1">Apply to teach {{ skill.title }}</h1>
+            <p class="text-muted mb-0">Your current skill level is <strong>{{ skill.normalized_skill_level() }}</strong>. If approved, you will be able to teach up to that level.</p>
+        </div>
+        <div class="card border-0">
+            <div class="card-body p-4 p-lg-5">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+                    <div class="mb-4">
+                        <label class="form-label">Why should you teach this skill?</label>
+                        {{ form.application_reason(class="form-control", rows="6", placeholder="Share your background, teaching approach, or proof of experience.") }}
+                        {% for error in form.application_reason.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        {{ form.submit(class="btn btn-success") }}
+                        <a href="{{ url_for('main.my_skills') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <span class="section-kicker">Inbox</span>
+            <h1 class="page-title mb-2">Notifications</h1>
+            <p class="page-subtitle mb-0">Stay on top of selections, moderation updates, collaboration changes, and reminders across the platform.</p>
+        </div>
+        {% if notifications %}
+        <form method="POST" action="{{ url_for('main.mark_all_notifications_read') }}">
+            <button type="submit" class="btn btn-outline-primary rounded-pill px-3">Mark All as Read</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+
+<div class="card border-0 shadow-sm app-card">
+    <div class="card-body p-0">
+        {% if notifications %}
+            <div class="list-group list-group-flush notifications-list">
+                {% for notification in notifications %}
+                    <div class="list-group-item px-4 py-3 border-0 {% if not notification.is_read %}bg-light-subtle{% endif %}">
+                        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start gap-3">
+                            <div class="d-flex gap-3 align-items-start flex-grow-1">
+                                <div class="notification-dot {% if notification.is_read %}is-read{% else %}is-unread{% endif %}"></div>
+                                <div>
+                                    <p class="mb-1 fw-medium">{{ notification.message }}</p>
+                                    <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-lg-end">
+                                {% if not notification.is_read %}
+                                    <span class="badge bg-danger rounded-pill">Unread</span>
+                                {% else %}
+                                    <span class="badge bg-success rounded-pill">Read</span>
+                                {% endif %}
+                                {% if notification.notification_link %}
+                                    <a href="{{ url_for('main.open_notification', notification_id=notification.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Open</a>
+                                {% endif %}
+                                {% if not notification.is_read %}
+                                    <form method="POST" action="{{ url_for('main.mark_notification_read', notification_id=notification.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-3">Mark Read</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state-panel text-center py-5 px-4 m-4">
+                <div class="empty-state-icon mb-3"><i class="bi bi-bell"></i></div>
+                <h3 class="h5 mb-2">No notifications yet</h3>
+                <p class="text-muted mb-0">When something important happens in your requests, applications, or collaborations, it will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

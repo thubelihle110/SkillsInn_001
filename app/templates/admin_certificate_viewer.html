@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="page-hero__content">
+        <span class="section-eyebrow">Certificate viewer</span>
+        <h1 class="page-title mb-2">Review Uploaded Certificate</h1>
+        <p class="page-subtitle mb-0">Opening this viewer logs the evidence as reviewed and unlocks the decision controls on the skill review page.</p>
+    </div>
+    <div class="page-hero__actions">
+        <a href="{{ url_for('main.admin_skill_detail', skill_id=skill.id) }}" class="btn btn-primary rounded-pill px-4">Return to Review Decision</a>
+    </div>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="app-card h-100">
+            <div class="app-card__header">
+                <h2 class="app-card__title">Review status</h2>
+            </div>
+            <div class="app-card__body">
+                <div class="verification-gate-card is-unlocked mb-3">
+                    <div class="verification-gate-card__icon"><i class="bi bi-shield-check"></i></div>
+                    <div>
+                        <div class="verification-gate-card__title">Certificate review logged</div>
+                        <p class="verification-gate-card__text mb-0">Decision controls are now unlocked for this skill.</p>
+                    </div>
+                </div>
+                <div class="detail-panel mb-3">
+                    <div class="detail-panel__label">Skill</div>
+                    <div class="detail-panel__value">{{ skill.title }}</div>
+                </div>
+                <div class="detail-panel mb-3">
+                    <div class="detail-panel__label">Owner</div>
+                    <div class="detail-panel__value">{{ skill.owner.full_name }}</div>
+                </div>
+                <div class="detail-panel">
+                    <div class="detail-panel__label">Viewed at</div>
+                    <div class="detail-panel__value">{{ skill.certificate_viewed_at_display() or 'Just now' }}</div>
+                </div>
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{{ certificate_url }}" target="_blank" class="btn btn-outline-secondary rounded-pill">Open file in separate tab</a>
+                    <a href="{{ url_for('main.admin_skill_detail', skill_id=skill.id) }}" class="btn btn-primary rounded-pill">Back to decision page</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="app-card h-100">
+            <div class="app-card__header">
+                <h2 class="app-card__title">Certificate preview</h2>
+                <p class="app-card__subtitle">Use the direct open button if your browser does not preview the file inline.</p>
+            </div>
+            <div class="app-card__body">
+                <div class="certificate-viewer-shell">
+                    <iframe src="{{ certificate_url }}" title="Certificate Viewer" class="certificate-viewer-frame"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

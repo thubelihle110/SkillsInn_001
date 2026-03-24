@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="page-header-card mb-4 learning-hero-card">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">{{ course.title }}</span>
+            <h1 class="mb-1">Chapter {{ chapter.chapter_order }} · {{ chapter.title }}</h1>
+            <p class="text-muted mb-0">Complete the material below, then use the quiz button if this chapter includes a quiz.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+            <a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a>
+            {% set next_chapter = enrollment.next_unlocked_chapter() %}
+            {% if next_chapter and next_chapter.id != chapter.id %}
+            <a href="{{ url_for('main.learning_chapter_detail', course_id=course.id, chapter_id=next_chapter.id) }}" class="btn btn-primary">Next unlocked chapter</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    {% if chapter.is_required %}<span class="badge text-bg-warning">Required</span>{% endif %}
+                    {% if progress.is_completed %}<span class="badge text-bg-success">Completed</span>{% elif progress.content_viewed_at %}<span class="badge text-bg-info">Viewed</span>{% else %}<span class="badge text-bg-secondary">Not completed</span>{% endif %}
+                    {% if chapter.has_quiz() %}<span class="badge text-bg-primary">Quiz required</span>{% endif %}
+                </div>
+                {% for block in chapter.display_content_blocks() %}
+                {% set media_href = url_for('static', filename=block.media_url) if block.media_url and block.media_url.startswith('uploads/') else block.media_url %}
+                {% set media_lower = (media_href or '')|lower %}
+                <div class="border rounded-4 p-4 mb-3 learning-preview-card">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+                        <strong>{{ block.title or block.block_type|title }}</strong>
+                        <span class="badge text-bg-light border">{{ block.block_type|upper }}</span>
+                    </div>
+                    {% if block.block_type == 'text' %}
+                        <div style="white-space: pre-wrap;">{{ block.text_content }}</div>
+                    {% elif block.block_type == 'image' %}
+                        {% if media_href %}<img src="{{ media_href }}" alt="{{ block.title or 'Chapter image' }}" class="img-fluid rounded-4 learning-media-frame mb-2">{% endif %}
+                        {% if block.text_content %}<div style="white-space: pre-wrap;">{{ block.text_content }}</div>{% endif %}
+                    {% elif block.block_type == 'pdf' %}
+                        {% if media_href %}
+                        <div class="learning-file-chip mb-2"><i class="bi bi-file-earmark-pdf"></i> PDF material</div>
+                        <a href="{{ media_href }}" target="_blank" class="btn btn-outline-primary btn-sm mb-2">Open PDF</a>
+                        {% endif %}
+                        {% if block.text_content %}<div style="white-space: pre-wrap;">{{ block.text_content }}</div>{% endif %}
+                    {% elif block.block_type == 'media' %}
+                        {% if media_href %}
+                            {% if media_lower.endswith('.mp4') or media_lower.endswith('.webm') or media_lower.endswith('.ogg') or media_lower.endswith('.mov') %}
+                            <video controls class="w-100 rounded-4 learning-media-frame mb-2">
+                                <source src="{{ media_href }}">
+                            </video>
+                            {% elif media_lower.endswith('.mp3') or media_lower.endswith('.wav') or media_lower.endswith('.m4a') %}
+                            <audio controls class="w-100 mb-2">
+                                <source src="{{ media_href }}">
+                            </audio>
+                            {% elif media_lower.endswith('.jpg') or media_lower.endswith('.jpeg') or media_lower.endswith('.png') or media_lower.endswith('.gif') or media_lower.endswith('.webp') %}
+                            <img src="{{ media_href }}" alt="{{ block.title or 'Media image' }}" class="img-fluid rounded-4 learning-media-frame mb-2">
+                            {% else %}
+                            <a href="{{ media_href }}" target="_blank" class="btn btn-outline-primary btn-sm mb-2">Open media</a>
+                            {% endif %}
+                        {% endif %}
+                        {% if block.text_content %}<div style="white-space: pre-wrap;">{{ block.text_content }}</div>{% endif %}
+                    {% elif block.block_type == 'link' %}
+                        {% if block.external_url %}<a href="{{ block.external_url }}" target="_blank" class="btn btn-outline-primary btn-sm mb-2">Open external link</a>{% endif %}
+                        {% if block.text_content %}<div style="white-space: pre-wrap;">{{ block.text_content }}</div>{% endif %}
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted">No content blocks have been added to this chapter yet.</div>
+                {% endfor %}
+                <form method="POST" action="{{ url_for('main.mark_learning_chapter_viewed', course_id=course.id, chapter_id=chapter.id) }}" class="mt-4 d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary">{% if chapter.has_quiz() %}I finished the chapter content{% else %}Mark chapter complete{% endif %}</button>
+                    <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+                </form>
+                {% if progress.content_viewed_at %}
+                <div class="small text-muted mt-2">Content viewed and submitted.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if chapter.has_quiz() %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
+                    <h4 class="mb-0">Chapter quiz</h4>
+                    <span class="badge text-bg-info">Pass mark {{ chapter_quiz_pass_mark }}%</span>
+                </div>
+                {% if progress.quiz_score is not none %}
+                <div class="alert {% if progress.quiz_passed %}alert-success{% else %}alert-warning{% endif %}">
+                    Latest score: {{ progress.quiz_score }}%{% if progress.quiz_passed %} · Passed{% else %} · Retry allowed{% endif %}
+                </div>
+                {% endif %}
+                <p class="text-muted mb-3">Use the button below to open the quiz page.</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('main.learning_chapter_quiz', course_id=course.id, chapter_id=chapter.id) }}" class="btn btn-primary">Take quiz</a>
+                    <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Progress</h4>
+                <div class="small text-muted d-grid gap-2">
+                    <div><strong class="text-dark">Course progress:</strong> {{ enrollment.progress_percent() }}%</div>
+                    <div><strong class="text-dark">Completed required chapters:</strong> {{ enrollment.completed_required_chapter_count() }}/{{ course.required_chapter_count() }}</div>
+                    <div><strong class="text-dark">Next chapter:</strong> {% set next_chapter = enrollment.next_unlocked_chapter() %}{% if next_chapter %}{{ next_chapter.title }}{% else %}Final test ready{% endif %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h4 class="mb-3">Navigation</h4>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.learning_course_detail', course_id=course.id) }}" class="btn btn-outline-secondary">Back to course</a>
+                    <a href="{{ url_for('main.my_learning') }}" class="btn btn-outline-secondary">Back to My learning</a>
+                    <a href="{{ url_for('main.learning_hub') }}" class="btn btn-outline-secondary">Back to Learning Hub</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

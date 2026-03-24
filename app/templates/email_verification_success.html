@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+        <div class="card shadow-sm auth-card auth-card-success">
+            <div class="card-body p-4 p-lg-5 text-center">
+                <div class="auth-status-icon auth-status-icon-success mb-3">✓</div>
+                <h2 class="mb-2">Email verified</h2>
+                <p class="text-muted mb-4">
+                    {% if user %}
+                        {{ user.email }} has been verified successfully. You can now log in to SkillsInn.
+                    {% else %}
+                        Your email has been verified successfully.
+                    {% endif %}
+                </p>
+
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('main.login') }}" class="btn btn-dark">Continue to login</a>
+                    <a href="{{ url_for('main.register') }}" class="btn btn-outline-secondary">Create another account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Marketplace</span>
+            <h1 class="mb-1">Browse help requests</h1>
+            <p class="text-muted mb-0">Explore open opportunities, review requester credibility, and apply where your skills fit best.</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('main.create_help_request') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-2"></i>Create request
+            </a>
+        </div>
+    </div>
+</div>
+
+<form
+    method="GET"
+    action="{{ url_for('main.help_requests') }}"
+    class="filter-toolbar mb-4"
+    id="browse-requests-filter-form"
+>
+    <div class="row g-3 align-items-center">
+        <div class="col-lg-4">
+            <div class="position-relative">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                <input
+                    type="text"
+                    name="search"
+                    id="browse-search-input"
+                    class="form-control ps-5"
+                    placeholder="Search by title, category, or location"
+                    value="{{ selected_search or '' }}"
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <select name="category" id="browse-category-filter" class="form-select">
+                <option value="">All categories</option>
+                <option value="Information Technology" {% if selected_category == "Information Technology" %}selected{% endif %}>Information Technology</option>
+                <option value="Construction" {% if selected_category == "Construction" %}selected{% endif %}>Construction</option>
+                <option value="Engineering" {% if selected_category == "Engineering" %}selected{% endif %}>Engineering</option>
+                <option value="Education and Tutoring" {% if selected_category == "Education and Tutoring" %}selected{% endif %}>Education and Tutoring</option>
+                <option value="Home and Maintenance Services" {% if selected_category == "Home and Maintenance Services" %}selected{% endif %}>Home and Maintenance Services</option>
+                <option value="Business and Administration" {% if selected_category == "Business and Administration" %}selected{% endif %}>Business and Administration</option>
+                <option value="Creative Arts and Design" {% if selected_category == "Creative Arts and Design" %}selected{% endif %}>Creative Arts and Design</option>
+                <option value="Other" {% if selected_category == "Other" %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <select name="urgency" id="browse-urgency-filter" class="form-select">
+                <option value="">Any urgency</option>
+                <option value="Low" {% if selected_urgency == "Low" %}selected{% endif %}>Low</option>
+                <option value="Medium" {% if selected_urgency == "Medium" %}selected{% endif %}>Medium</option>
+                <option value="High" {% if selected_urgency == "High" %}selected{% endif %}>High</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <select name="experience" id="browse-experience-filter" class="form-select">
+                <option value="">Any experience</option>
+                <option value="Beginner" {% if selected_experience == "Beginner" %}selected{% endif %}>Beginner</option>
+                <option value="Intermediate" {% if selected_experience == "Intermediate" %}selected{% endif %}>Intermediate</option>
+                <option value="Advanced" {% if selected_experience == "Advanced" %}selected{% endif %}>Advanced</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <select name="schedule_type" id="browse-schedule-filter" class="form-select">
+                <option value="">Any schedule</option>
+                <option value="one_time" {% if selected_schedule_type == "one_time" %}selected{% endif %}>One time</option>
+                <option value="date_range" {% if selected_schedule_type == "date_range" %}selected{% endif %}>Date range</option>
+                <option value="recurring_weekly" {% if selected_schedule_type == "recurring_weekly" %}selected{% endif %}>Weekly</option>
+                <option value="recurring_monthly" {% if selected_schedule_type == "recurring_monthly" %}selected{% endif %}>Monthly</option>
+            </select>
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <input
+                type="text"
+                name="city"
+                id="browse-city-filter"
+                class="form-control"
+                placeholder="City"
+                value="{{ selected_city or '' }}"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="col-sm-6 col-lg-2">
+            <select name="sort" id="browse-sort-filter" class="form-select">
+                <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Newest first</option>
+                <option value="oldest" {% if selected_sort == "oldest" %}selected{% endif %}>Oldest first</option>
+                <option value="urgency_high" {% if selected_sort == "urgency_high" %}selected{% endif %}>Urgency first</option>
+            </select>
+        </div>
+
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-funnel me-2"></i>Apply filters
+            </button>
+            <a href="{{ url_for('main.help_requests') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
+            </a>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="small text-muted" id="browse-live-status">Showing matching requests</div>
+    <div class="small text-primary d-none" id="browse-live-loading">Searching...</div>
+</div>
+
+<div id="browse-requests-results">
+    {% include "_help_requests_results.html" %}
+</div>
+{% endblock %}

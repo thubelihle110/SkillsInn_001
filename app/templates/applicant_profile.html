@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+{% set provider_avg = applicant.average_provider_rating_received() %}
+{% set provider_count = applicant.provider_rating_count_received() %}
+
+<div class="page-header-card mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <span class="badge text-bg-primary-subtle border border-primary-subtle mb-3">Applicant profile</span>
+            <h1 class="mb-1">{{ applicant.full_name }}</h1>
+            <p class="text-muted mb-0">Review applicant details for “{{ help_request.title }}”.</p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.view_request_applications', request_id=help_request.id) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to applicants
+            </a>
+
+            {% if application.status == "Applied" and help_request.status not in ["In Progress", "Completed"] %}
+                <form method="POST" action="{{ url_for('main.select_applicant', application_id=application.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-success">Select applicant</button>
+                </form>
+            {% elif application.status == "Selected" %}
+                <span class="badge text-bg-warning align-self-center">Awaiting candidate response</span>
+            {% elif application.status == "Accepted" %}
+                <span class="badge text-bg-success align-self-center">Accepted</span>
+            {% elif application.status == "Declined" %}
+                <span class="badge text-bg-danger align-self-center">Declined</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 h-100">
+            <div class="card-body p-4">
+                <div class="text-center text-lg-start mb-4">
+                    {% if applicant.profile_picture %}
+                        <img src="{{ url_for('static', filename=applicant.profile_picture) }}" alt="Profile Picture" class="img-thumbnail rounded-4 mb-3" style="width: 160px; height: 160px; object-fit: cover;">
+                    {% else %}
+                        <div class="avatar-circle mx-auto mx-lg-0 mb-3" style="width: 96px; height: 96px; font-size: 2rem;">{{ (applicant.full_name or applicant.email or 'U')[0]|upper }}</div>
+                    {% endif %}
+                    <h3 class="mb-1">{{ applicant.full_name }}</h3>
+                    <p class="text-muted mb-0">{{ applicant.email }}</p>
+                </div>
+
+                <div class="mb-4 small">
+                    <div class="text-muted mb-1">Provider rating</div>
+                    {% if provider_count %}
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span style="color: #d4af37; font-size: 1.1rem; letter-spacing: 0.08rem;">
+                                {% for i in range(1, 6) %}
+                                    {% if provider_avg >= i %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="fw-semibold">{{ provider_avg }}/5</span>
+                            <span class="text-muted">({{ provider_count }} rating{{ '' if provider_count == 1 else 's' }})</span>
+                        </div>
+                    {% else %}
+                        <div class="text-muted">No provider ratings yet.</div>
+                    {% endif %}
+                </div>
+
+                <div class="small text-muted d-grid gap-3">
+                    <div><strong class="d-block text-dark mb-1">Phone</strong>{{ applicant.phone or 'Not provided' }}</div>
+                    <div><strong class="d-block text-dark mb-1">City</strong>{{ applicant.city or 'Not provided' }}</div>
+                    <div><strong class="d-block text-dark mb-1">Availability</strong>{{ applicant.availability or 'Not provided' }}</div>
+                    <div><strong class="d-block text-dark mb-1">Experience level</strong>{{ applicant.experience_level or 'Not provided' }}</div>
+                    <div><strong class="d-block text-dark mb-1">Preferred contact</strong>{{ applicant.preferred_contact_method or 'Not provided' }}</div>
+                </div>
+
+                <hr>
+
+                <div class="small text-muted d-grid gap-3">
+                    <div><strong class="d-block text-dark mb-1">Submitted CV type</strong>{{ application.submitted_resume_name() }}</div>
+                    <div><strong class="d-block text-dark mb-1">Application submitted</strong>{{ application.applied_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                </div>
+
+                <div class="mt-4">
+                    {% if application.submitted_resume_path() %}
+                        <a href="{{ url_for('static', filename=application.submitted_resume_path()) }}" target="_blank" class="btn btn-outline-primary btn-sm">View submitted CV</a>
+                    {% else %}
+                        <p class="text-muted mb-0">No CV submitted with this application.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h4 class="mb-1">Application summary</h4>
+                        <p class="text-muted mb-0">Core information submitted by the applicant for this request.</p>
+                    </div>
+                    <span class="badge {% if application.status == 'Applied' %}text-bg-primary{% elif application.status == 'Selected' %}text-bg-warning{% elif application.status == 'Accepted' %}text-bg-success{% else %}text-bg-danger{% endif %}">{{ application.status }}</span>
+                </div>
+
+                <div class="info-strip mb-3">
+                    <div class="fw-semibold mb-2">Application message</div>
+                    <p class="mb-0 text-muted">{{ application.message }}</p>
+                </div>
+
+                <div class="small text-muted"><strong class="text-dark">Applied at:</strong> {{ application.applied_at.strftime('%Y-%m-%d %H:%M') }}</div>
+            </div>
+        </div>
+
+        <div class="card border-0">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div>
+                        <h4 class="mb-1">Applicant skills</h4>
+                        <p class="text-muted mb-0">Use this section to judge relevance, proof, and verification status.</p>
+                    </div>
+                </div>
+
+                {% if applicant_skills %}
+                    <div class="row g-3">
+                        {% for skill in applicant_skills %}
+                        <div class="col-md-6">
+                            <div class="info-strip h-100">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <span class="badge text-bg-light border">{{ skill.display_category() }}</span>
+                                    <span class="skill-badge skill-badge-{{ skill.display_badge_tone() }}">{{ skill.display_badge_label() }}</span>
+                                </div>
+                                <h5 class="mb-2">{{ skill.title }}</h5>
+                                <p class="text-muted mb-3">{{ skill.description[:160] }}{% if skill.description|length > 160 %}...{% endif %}</p>
+                                <div class="small text-muted d-grid gap-2">
+                                    <div><strong class="text-dark">Experience:</strong> {{ skill.experience_level }}</div>
+                                    <div><strong class="text-dark">Availability:</strong> {{ skill.availability }}</div>
+                                </div>
+                                {% if skill.certificate_file %}
+                                    <div class="mt-3">
+                                        <a href="{{ url_for('static', filename=skill.certificate_file) }}" target="_blank" class="btn btn-outline-secondary btn-sm">View certificate</a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state-card">
+                        <i class="bi bi-tools"></i>
+                        <h5 class="mt-3 mb-2">This applicant has not added any skills yet</h5>
+                        <p class="text-muted mb-0">There are no skill records to review for this profile.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

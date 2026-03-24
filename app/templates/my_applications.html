@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="page-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <span class="section-kicker">Work</span>
+            <h1 class="page-title mb-2">My Applications</h1>
+            <p class="page-subtitle mb-0">Track every request you applied for, see response dates, and jump into collaborations once accepted.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.help_requests') }}" class="btn btn-outline-primary rounded-pill px-3">Browse Requests</a>
+            <a href="{{ url_for('main.my_collaborations') }}" class="btn btn-primary rounded-pill px-3">My Collaborations</a>
+        </div>
+    </div>
+</section>
+
+<div class="row g-4">
+    {% for application in applications %}
+    {% set requester_avg = application.help_request.requester.average_requester_rating_received() %}
+    {% set requester_count = application.help_request.requester.requester_rating_count_received() %}
+    <div class="col-xl-6">
+        <article class="card border-0 shadow-sm h-100 app-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <span class="badge text-bg-light border mb-2">{{ application.help_request.display_category() }}</span>
+                        <h4 class="mb-1">{{ application.help_request.title }}</h4>
+                        <p class="text-muted mb-0">Requested by {{ application.help_request.requester.full_name }}</p>
+                    </div>
+                    {% set status_class = 'bg-warning text-dark' if application.status in ['Pending', 'Selected'] else ('bg-success' if application.status == 'Accepted' else ('bg-danger' if application.status == 'Declined' else 'bg-secondary')) %}
+                    <span class="badge rounded-pill {{ status_class }}">{{ application.status }}</span>
+                </div>
+
+                <div class="row g-3 small mb-3">
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Applied</div>
+                            <div class="fw-semibold">{{ application.applied_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="app-detail-chip h-100">
+                            <div class="text-muted text-uppercase tiny-label">Schedule</div>
+                            <div class="fw-semibold">{{ application.help_request.schedule_display() }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="app-detail-chip mb-3">
+                    <div class="text-muted text-uppercase tiny-label mb-1">Requester reputation</div>
+                    {% if requester_count %}
+                        <div class="d-flex align-items-center flex-wrap gap-2 small">
+                            <span class="rating-stars">
+                                {% for i in range(1, 6) %}
+                                    {% if requester_avg >= i %}★{% else %}☆{% endif %}
+                                {% endfor %}
+                            </span>
+                            <span class="fw-semibold">{{ requester_avg }}/5</span>
+                            <span class="text-muted">{{ requester_count }} rating{{ '' if requester_count == 1 else 's' }}</span>
+                        </div>
+                    {% else %}
+                        <div class="small text-muted">No requester ratings yet.</div>
+                    {% endif %}
+                </div>
+
+                <div class="app-message-box mb-3">
+                    <div class="text-muted text-uppercase tiny-label mb-1">Your message</div>
+                    <p class="mb-0">{{ application.message[:180] }}{% if application.message|length > 180 %}...{% endif %}</p>
+                </div>
+
+                {% if application.responded_at %}
+                    <p class="small text-muted mb-2">
+                        <strong>
+                            {% if application.status == "Accepted" %}Accepted on{% elif application.status == "Declined" %}Declined on{% else %}Responded on{% endif %}
+                        </strong>
+                        {{ application.responded_at.strftime('%Y-%m-%d %H:%M') }}
+                    </p>
+                {% endif %}
+
+                {% if application.decline_reason %}
+                    <div class="alert alert-light border small mb-0">
+                        <strong>Decline reason:</strong> {{ application.decline_reason }}
+                        {% if application.decline_reason == "Other" and application.decline_reason_details %}
+                            <div class="mt-1"><strong>Details:</strong> {{ application.decline_reason_details }}</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 pt-0 pb-4 px-4 d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('main.help_request_detail', request_id=application.help_request.id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">View Request</a>
+                {% if application.status == "Selected" %}
+                    <a href="{{ url_for('main.respond_to_selection', application_id=application.id) }}" class="btn btn-success btn-sm rounded-pill px-3">Respond</a>
+                {% endif %}
+                {% if application.status == "Accepted" and collaboration_map.get(application.id) %}
+                    <a href="{{ url_for('main.collaboration_detail', collaboration_id=collaboration_map[application.id].id) }}" class="btn btn-primary btn-sm rounded-pill px-3">Open Collaboration</a>
+                {% endif %}
+            </div>
+        </article>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="empty-state-panel text-center py-5 px-4">
+            <div class="empty-state-icon mb-3"><i class="bi bi-send-check"></i></div>
+            <h3 class="h5 mb-2">No applications yet</h3>
+            <p class="text-muted mb-3">Start browsing requests and send your first application to begin building collaborations.</p>
+            <a href="{{ url_for('main.help_requests') }}" class="btn btn-primary rounded-pill px-4">Browse Requests</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
