@@ -1,5 +1,6 @@
 import os
 import calendar
+import requests
 import hashlib
 import uuid
 from datetime import datetime, date, timedelta, time
@@ -445,7 +446,47 @@ def get_pending_reschedule_proposal(collaboration):
     )
 
 
-def send_platform_email(to_email, subject, body):
+def _format_from_header():
+    from_name = (current_app.config.get("RESEND_FROM_NAME") or "SkillsInn").strip()
+    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip()
+    return f"{from_name} <{from_email}>" if from_name else from_email
+
+
+def send_email_via_resend(to_email, subject, body, html=None):
+    api_key = current_app.config.get("RESEND_API_KEY")
+    if not api_key:
+        return False
+
+    payload = {
+        "from": _format_from_header(),
+        "to": [to_email],
+        "subject": subject,
+        "text": body,
+    }
+    if html:
+        payload["html"] = html
+
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=20,
+        )
+        if response.ok:
+            return True
+
+        print("Resend error while sending email:", response.status_code, response.text)
+        return False
+    except Exception as e:
+        print(f"Resend request error: {e}")
+        return False
+
+
+def send_email_via_smtp(to_email, subject, body):
     if current_app.config.get("MAIL_USERNAME") and current_app.config.get("MAIL_PASSWORD"):
         try:
             msg = MailMessage(subject=subject, recipients=[to_email])
@@ -458,13 +499,35 @@ def send_platform_email(to_email, subject, body):
         except Exception as e:
             print(f"General mail error: {e}")
             return False
-    else:
-        print("\nEMAIL NOT SENT - MAIL NOT CONFIGURED")
-        print(f"To: {to_email}")
-        print(f"Subject: {subject}")
-        print(body)
-        print()
-        return False
+    return False
+
+
+def send_transactional_email(to_email, subject, body, html=None):
+    provider = (current_app.config.get("EMAIL_PROVIDER") or "auto").strip().lower()
+
+    if provider == "resend":
+        return send_email_via_resend(to_email, subject, body, html=html)
+
+    if provider == "smtp":
+        return send_email_via_smtp(to_email, subject, body)
+
+    if current_app.config.get("RESEND_API_KEY"):
+        return send_email_via_resend(to_email, subject, body, html=html)
+
+    return send_email_via_smtp(to_email, subject, body)
+
+
+def send_platform_email(to_email, subject, body):
+    sent = send_transactional_email(to_email, subject, body)
+    if sent:
+        return True
+
+    print("\nEMAIL NOT SENT - EMAIL PROVIDER NOT CONFIGURED OR DELIVERY FAILED")
+    print(f"To: {to_email}")
+    print(f"Subject: {subject}")
+    print(body)
+    print()
+    return False
 
 
 def notify_admins_about_verification(skill, action="submitted"):
@@ -551,13 +614,8 @@ def send_reset_email(user):
     token = user.get_reset_token(current_app.config["SECRET_KEY"])
     reset_link = url_for("main.reset_password", token=token, _external=True)
 
-    if current_app.config.get("MAIL_USERNAME") and current_app.config.get("MAIL_PASSWORD"):
-        try:
-            msg = MailMessage(
-                subject="SkillsInn - Password Reset Request",
-                recipients=[user.email]
-            )
-            msg.body = f"""Hello {user.full_name},
+    subject = "SkillsInn - Password Reset Request"
+    body = f"""Hello {user.full_name},
 
 You requested to reset your SkillsInn password.
 
@@ -567,32 +625,29 @@ Click the link below to reset your password:
 If you did not make this request, please ignore this email.
 This link will expire in 1 hour.
 """
-            mail.send(msg)
-            return True
-        except SMTPException as e:
-            print(f"SMTP error while sending email: {e}")
-            return False
-        except Exception as e:
-            print(f"General mail error: {e}")
-            return False
-    else:
-        print("\nPASSWORD RESET LINK:")
-        print(reset_link)
-        print()
+    html = f"""
+        <p>Hello {user.full_name},</p>
+        <p>You requested to reset your SkillsInn password.</p>
+        <p><a href="{reset_link}">Reset your password</a></p>
+        <p>If you did not make this request, please ignore this email.</p>
+        <p>This link will expire in 1 hour.</p>
+    """
+
+    if send_transactional_email(user.email, subject, body, html=html):
         return True
+
+    print("\nPASSWORD RESET LINK:")
+    print(reset_link)
+    print()
+    return True
 
 
 def send_verification_email(user):
     token = user.get_email_verification_token(current_app.config["SECRET_KEY"])
     verify_link = url_for("main.verify_email", token=token, _external=True)
 
-    if current_app.config.get("MAIL_USERNAME") and current_app.config.get("MAIL_PASSWORD"):
-        try:
-            msg = MailMessage(
-                subject="SkillsInn - Verify Your Email",
-                recipients=[user.email]
-            )
-            msg.body = f"""Hello {user.full_name},
+    subject = "SkillsInn - Verify Your Email"
+    body = f"""Hello {user.full_name},
 
 Welcome to SkillsInn. Please verify your email address before logging in.
 
@@ -602,19 +657,22 @@ Click the link below to verify your email:
 If you did not create this account, please ignore this email.
 This link will expire in 24 hours.
 """
-            mail.send(msg)
-            return True
-        except SMTPException as e:
-            print(f"SMTP error while sending verification email: {e}")
-            return False
-        except Exception as e:
-            print(f"General verification mail error: {e}")
-            return False
-    else:
-        print("\nEMAIL VERIFICATION LINK:")
-        print(verify_link)
-        print()
+    html = f"""
+        <p>Hello {user.full_name},</p>
+        <p>Welcome to SkillsInn. Please verify your email address before logging in.</p>
+        <p><a href="{verify_link}">Verify your email</a></p>
+        <p>If you did not create this account, please ignore this email.</p>
+        <p>This link will expire in 24 hours.</p>
+    """
+
+    sent = send_transactional_email(user.email, subject, body, html=html)
+    if sent:
         return True
+
+    print("\nEMAIL VERIFICATION LINK:")
+    print(verify_link)
+    print()
+    return True
 
 
 @main.app_context_processor

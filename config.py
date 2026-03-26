@@ -9,13 +9,19 @@ class Config:
     SQLALCHEMY_DATABASE_URI = "sqlite:///skillsinn.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    MAIL_SERVER = "smtp.gmail.com"
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USE_SSL = False
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "auto")
+
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "True").lower() == "true"
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", "False").lower() == "true"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_USERNAME")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
+
+    RESEND_API_KEY = os.environ.get("re_4zFzYDWq_PCJfXpDXt1y2txLxipWyv3Yk")
+    RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+    RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "SkillsInn")
 
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024
     UPLOAD_FOLDER = os.path.join("app", "static", "uploads")
