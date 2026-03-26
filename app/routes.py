@@ -448,7 +448,7 @@ def get_pending_reschedule_proposal(collaboration):
 
 def _format_from_header():
     from_name = (current_app.config.get("RESEND_FROM_NAME") or "SkillsInn").strip()
-    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip()
+    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "tholigawozi@gmail.com").strip()
     return f"{from_name} <{from_email}>" if from_name else from_email
 
 
