@@ -1,5 +1,4 @@
 import os
-import resend
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,8 +19,8 @@ class Config:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
 
-    RESEND_API_KEY = os.environ.get("re_4zFzYDWq_PCJfXpDXt1y2txLxipWyv3Yk")
-    RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "tholigawozi@gmail.com")
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+    RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
     RESEND_FROM_NAME = os.environ.get("RESEND_FROM_NAME", "SkillsInn")
 
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024

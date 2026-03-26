@@ -1,5 +1,4 @@
 import os
-import resend
 import calendar
 import requests
 import hashlib
@@ -449,13 +448,14 @@ def get_pending_reschedule_proposal(collaboration):
 
 def _format_from_header():
     from_name = (current_app.config.get("RESEND_FROM_NAME") or "SkillsInn").strip()
-    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "tholigawozi@gmail.com").strip()
+    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip()
     return f"{from_name} <{from_email}>" if from_name else from_email
 
 
 def send_email_via_resend(to_email, subject, body, html=None):
-    api_key = current_app.config.get("re_4zFzYDWq_PCJfXpDXt1y2txLxipWyv3Yk")
-    if not api_key:
+    api_key = (current_app.config.get("RESEND_API_KEY") or "").strip()
+    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "").strip()
+    if not api_key or not from_email:
         return False
 
     payload = {
