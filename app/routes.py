@@ -1,4 +1,5 @@
 import os
+import resend
 import calendar
 import requests
 import hashlib
