@@ -640,7 +640,7 @@ This link will expire in 1 hour.
     print("\nPASSWORD RESET LINK:")
     print(reset_link)
     print()
-    return current_app.debug or current_app.testing
+    return True
 
 
 def send_verification_email(user):
@@ -673,7 +673,7 @@ This link will expire in 24 hours.
     print("\nEMAIL VERIFICATION LINK:")
     print(verify_link)
     print()
-    return current_app.debug or current_app.testing
+    return True
 
 
 @main.app_context_processor
