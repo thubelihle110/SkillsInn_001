@@ -453,7 +453,7 @@ def _format_from_header():
 
 
 def send_email_via_resend(to_email, subject, body, html=None):
-    api_key = current_app.config.get("RESEND_API_KEY")
+    api_key = current_app.config.get("re_4zFzYDWq_PCJfXpDXt1y2txLxipWyv3Yk")
     if not api_key:
         return False
 
