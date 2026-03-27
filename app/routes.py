@@ -446,10 +446,89 @@ def get_pending_reschedule_proposal(collaboration):
     )
 
 
-def _format_from_header():
-    from_name = (current_app.config.get("RESEND_FROM_NAME") or "SkillsInn").strip()
-    from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip()
+def _format_from_header(provider="resend"):
+    if provider == "gmail_api":
+        from_name = (current_app.config.get("GMAIL_API_FROM_NAME") or "SkillsInn").strip()
+        from_email = (current_app.config.get("GMAIL_API_SENDER_EMAIL") or "").strip()
+    else:
+        from_name = (current_app.config.get("RESEND_FROM_NAME") or "SkillsInn").strip()
+        from_email = (current_app.config.get("RESEND_FROM_EMAIL") or "onboarding@resend.dev").strip()
     return f"{from_name} <{from_email}>" if from_name else from_email
+
+
+def _is_local_debug_mode():
+    env = (current_app.config.get("ENV") or "").lower()
+    return bool(current_app.debug or current_app.testing or env == "development")
+
+
+def _gmail_api_is_configured():
+    return all([
+        (current_app.config.get("GMAIL_API_CLIENT_ID") or "").strip(),
+        (current_app.config.get("GMAIL_API_CLIENT_SECRET") or "").strip(),
+        (current_app.config.get("GMAIL_API_REFRESH_TOKEN") or "").strip(),
+        (current_app.config.get("GMAIL_API_SENDER_EMAIL") or "").strip(),
+    ])
+
+
+def _get_gmail_access_token():
+    token_uri = (current_app.config.get("GMAIL_API_TOKEN_URI") or "https://oauth2.googleapis.com/token").strip()
+    payload = {
+        "client_id": (current_app.config.get("GMAIL_API_CLIENT_ID") or "").strip(),
+        "client_secret": (current_app.config.get("GMAIL_API_CLIENT_SECRET") or "").strip(),
+        "refresh_token": (current_app.config.get("GMAIL_API_REFRESH_TOKEN") or "").strip(),
+        "grant_type": "refresh_token",
+    }
+
+    try:
+        response = requests.post(token_uri, data=payload, timeout=20)
+        if not response.ok:
+            print("Gmail token refresh error:", response.status_code, response.text)
+            return None
+
+        token_data = response.json()
+        return token_data.get("access_token")
+    except Exception as e:
+        print(f"Gmail token request error: {e}")
+        return None
+
+
+def send_email_via_gmail_api(to_email, subject, body, html=None):
+    if not _gmail_api_is_configured():
+        return False
+
+    access_token = _get_gmail_access_token()
+    if not access_token:
+        return False
+
+    sender = _format_from_header(provider="gmail_api")
+
+    try:
+        message = MIMEMultipart("alternative")
+        message["To"] = to_email
+        message["From"] = sender
+        message["Subject"] = subject
+        message.attach(MIMEText(body or "", "plain", "utf-8"))
+        if html:
+            message.attach(MIMEText(html, "html", "utf-8"))
+
+        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+        response = requests.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json",
+            },
+            json={"raw": raw_message},
+            timeout=20,
+        )
+        if response.ok:
+            return True
+
+        print("Gmail API send error:", response.status_code, response.text)
+        return False
+    except Exception as e:
+        print(f"Gmail API request error: {e}")
+        return False
 
 
 def send_email_via_resend(to_email, subject, body, html=None):
@@ -487,11 +566,13 @@ def send_email_via_resend(to_email, subject, body, html=None):
         return False
 
 
-def send_email_via_smtp(to_email, subject, body):
+def send_email_via_smtp(to_email, subject, body, html=None):
     if current_app.config.get("MAIL_USERNAME") and current_app.config.get("MAIL_PASSWORD"):
         try:
             msg = MailMessage(subject=subject, recipients=[to_email])
             msg.body = body
+            if html:
+                msg.html = html
             mail.send(msg)
             return True
         except SMTPException as e:
@@ -506,16 +587,22 @@ def send_email_via_smtp(to_email, subject, body):
 def send_transactional_email(to_email, subject, body, html=None):
     provider = (current_app.config.get("EMAIL_PROVIDER") or "auto").strip().lower()
 
+    if provider in {"gmail", "gmail_api"}:
+        return send_email_via_gmail_api(to_email, subject, body, html=html)
+
     if provider == "resend":
         return send_email_via_resend(to_email, subject, body, html=html)
 
     if provider == "smtp":
-        return send_email_via_smtp(to_email, subject, body)
+        return send_email_via_smtp(to_email, subject, body, html=html)
 
-    if current_app.config.get("RESEND_API_KEY"):
+    if _gmail_api_is_configured():
+        return send_email_via_gmail_api(to_email, subject, body, html=html)
+
+    if current_app.config.get("RESEND_API_KEY") and current_app.config.get("RESEND_FROM_EMAIL"):
         return send_email_via_resend(to_email, subject, body, html=html)
 
-    return send_email_via_smtp(to_email, subject, body)
+    return send_email_via_smtp(to_email, subject, body, html=html)
 
 
 def send_platform_email(to_email, subject, body):
@@ -640,7 +727,7 @@ This link will expire in 1 hour.
     print("\nPASSWORD RESET LINK:")
     print(reset_link)
     print()
-    return True
+    return _is_local_debug_mode()
 
 
 def send_verification_email(user):
@@ -673,7 +760,7 @@ This link will expire in 24 hours.
     print("\nEMAIL VERIFICATION LINK:")
     print(verify_link)
     print()
-    return True
+    return _is_local_debug_mode()
 
 
 @main.app_context_processor

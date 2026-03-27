@@ -11,6 +11,13 @@ class Config:
 
     EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "auto")
 
+    GMAIL_API_CLIENT_ID = os.environ.get("GMAIL_API_CLIENT_ID") or os.environ.get("GOOGLE_CLIENT_ID")
+    GMAIL_API_CLIENT_SECRET = os.environ.get("GMAIL_API_CLIENT_SECRET") or os.environ.get("GOOGLE_CLIENT_SECRET")
+    GMAIL_API_REFRESH_TOKEN = os.environ.get("GMAIL_API_REFRESH_TOKEN")
+    GMAIL_API_SENDER_EMAIL = os.environ.get("GMAIL_API_SENDER_EMAIL") or os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
+    GMAIL_API_FROM_NAME = os.environ.get("GMAIL_API_FROM_NAME", "SkillsInn")
+    GMAIL_API_TOKEN_URI = os.environ.get("GMAIL_API_TOKEN_URI", "https://oauth2.googleapis.com/token")
+
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com")
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "True").lower() == "true"
