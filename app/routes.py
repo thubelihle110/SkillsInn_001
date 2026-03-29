@@ -472,21 +472,46 @@ def _gmail_api_is_configured():
 
 def _get_gmail_access_token():
     token_uri = (current_app.config.get("GMAIL_API_TOKEN_URI") or "https://oauth2.googleapis.com/token").strip()
+    client_id = (current_app.config.get("GMAIL_API_CLIENT_ID") or "").strip()
+    client_secret = (current_app.config.get("GMAIL_API_CLIENT_SECRET") or "").strip()
+    refresh_token = (current_app.config.get("GMAIL_API_REFRESH_TOKEN") or "").strip()
+    sender_email = (current_app.config.get("GMAIL_API_SENDER_EMAIL") or "").strip()
+
     payload = {
-        "client_id": (current_app.config.get("GMAIL_API_CLIENT_ID") or "").strip(),
-        "client_secret": (current_app.config.get("GMAIL_API_CLIENT_SECRET") or "").strip(),
-        "refresh_token": (current_app.config.get("GMAIL_API_REFRESH_TOKEN") or "").strip(),
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": refresh_token,
         "grant_type": "refresh_token",
     }
 
     try:
+        print("GMAIL DEBUG: token request starting")
+        print("GMAIL DEBUG: token_uri =", token_uri)
+        print("GMAIL DEBUG: EMAIL_PROVIDER =", current_app.config.get("EMAIL_PROVIDER"))
+        print("GMAIL DEBUG: sender_email =", sender_email)
+        print("GMAIL DEBUG: client_id_present =", bool(client_id))
+        print("GMAIL DEBUG: client_secret_present =", bool(client_secret))
+        print("GMAIL DEBUG: refresh_token_present =", bool(refresh_token))
+        if client_id:
+            print("GMAIL DEBUG: client_id_suffix =", client_id[-20:])
+        if refresh_token:
+            print("GMAIL DEBUG: refresh_token_prefix =", refresh_token[:12])
+            print("GMAIL DEBUG: refresh_token_suffix =", refresh_token[-12:])
+
         response = requests.post(token_uri, data=payload, timeout=20)
+        print("GMAIL DEBUG: token status =", response.status_code)
+        print("GMAIL DEBUG: token body =", response.text)
+
         if not response.ok:
             print("Gmail token refresh error:", response.status_code, response.text)
             return None
 
         token_data = response.json()
-        return token_data.get("access_token")
+        access_token = token_data.get("access_token")
+        print("GMAIL DEBUG: access_token_present =", bool(access_token))
+        if access_token:
+            print("GMAIL DEBUG: access_token_prefix =", access_token[:12])
+        return access_token
     except Exception as e:
         print(f"Gmail token request error: {e}")
         return None
@@ -494,15 +519,26 @@ def _get_gmail_access_token():
 
 def send_email_via_gmail_api(to_email, subject, body, html=None):
     if not _gmail_api_is_configured():
+        print("GMAIL DEBUG: Gmail API config is incomplete")
+        print("GMAIL DEBUG: GMAIL_API_CLIENT_ID present =", bool((current_app.config.get("GMAIL_API_CLIENT_ID") or "").strip()))
+        print("GMAIL DEBUG: GMAIL_API_CLIENT_SECRET present =", bool((current_app.config.get("GMAIL_API_CLIENT_SECRET") or "").strip()))
+        print("GMAIL DEBUG: GMAIL_API_REFRESH_TOKEN present =", bool((current_app.config.get("GMAIL_API_REFRESH_TOKEN") or "").strip()))
+        print("GMAIL DEBUG: GMAIL_API_SENDER_EMAIL present =", bool((current_app.config.get("GMAIL_API_SENDER_EMAIL") or "").strip()))
         return False
 
     access_token = _get_gmail_access_token()
     if not access_token:
+        print("GMAIL DEBUG: No access token received")
         return False
 
     sender = _format_from_header(provider="gmail_api")
 
     try:
+        print("GMAIL DEBUG: send starting")
+        print("GMAIL DEBUG: to_email =", to_email)
+        print("GMAIL DEBUG: subject =", subject)
+        print("GMAIL DEBUG: sender header =", sender)
+
         message = MIMEMultipart("alternative")
         message["To"] = to_email
         message["From"] = sender
@@ -521,7 +557,12 @@ def send_email_via_gmail_api(to_email, subject, body, html=None):
             json={"raw": raw_message},
             timeout=20,
         )
+
+        print("GMAIL DEBUG: send status =", response.status_code)
+        print("GMAIL DEBUG: send body =", response.text)
+
         if response.ok:
+            print("GMAIL DEBUG: Gmail send succeeded")
             return True
 
         print("Gmail API send error:", response.status_code, response.text)
